@@ -503,7 +503,9 @@ button:focus-visible, input:focus-visible {
 .year-marker {
   width: 26px;
   height: 26px;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .year-marker__ring {
@@ -522,11 +524,21 @@ button:focus-visible, input:focus-visible {
   background: currentColor;
 }
 
+.year-marker__stem {
+  position: absolute;
+  height: 1.5px;
+  background: currentColor;
+  transform-origin: 0 50%;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
 .year-marker__label {
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
+  left: calc(100% + 10px);
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
   color: var(--ink);
   background: rgba(255,254,249,.96);
   border: 1px solid currentColor;
@@ -535,11 +547,58 @@ button:focus-visible, input:focus-visible {
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+
+.year-marker__label.is-dragging { cursor: grabbing; }
 
 .year-marker--birth { color: var(--birth); }
 .year-marker--death { color: var(--death); }
-.year-marker--offset .year-marker__label { bottom: auto; top: calc(100% + 6px); }
+.year-marker--death .year-marker__label {
+  left: auto;
+  right: calc(100% + 8px);
+}
+.year-marker--offset .year-marker__label {
+  left: 50%;
+  right: auto;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+
+.map-hint-stack {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: 0 1px 5px rgba(0,0,0,.16);
+}
+
+.map-hint-stack button {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.map-hint-stack button:last-child { border-bottom: 0; }
+.map-hint-stack button:disabled { opacity: .38; cursor: default; }
+.map-hint-stack button:not(:disabled):hover { background: #f2f2f2; }
+.map-hint-stack button:not(:disabled):active { transform: scale(.97); }
+
+.map-shell:has(.map-hint-stack) .maplibregl-ctrl-top-right .maplibregl-ctrl {
+  margin-top: 78px;
+}
 
 .maplibregl-ctrl-group { border-radius: 0 !important; box-shadow: 0 1px 5px rgba(0,0,0,.16) !important; }
 .maplibregl-ctrl-attrib { font-size: 9px; }
@@ -600,12 +659,29 @@ button:focus-visible, input:focus-visible {
 
 .round-tools {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   margin-top: 20px;
-  gap: 8px;
 }
 
-.round-tools button:nth-child(3) { grid-column: 1 / -1; }
+.sheet-grab {
+  display: none;
+  width: 100%;
+  min-height: 28px;
+  margin: 0 0 4px;
+  padding: 8px 0 6px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.sheet-grab i {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto;
+  border-radius: 4px;
+  background: #c4c6c0;
+}
 
 .round-tools button, .secondary-action {
   min-height: 42px;
@@ -697,21 +773,59 @@ button:focus-visible, input:focus-visible {
 .results-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
 
 @media (max-width: 900px) {
-  .site-frame,
+  .site-frame { height: auto; overflow: visible; }
   .site-frame--game {
-    height: auto;
-    overflow: visible;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .site-frame--game .site-footer { display: none; }
+  .site-frame--game .game-screen {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .home-hero { grid-template-columns: 1fr; gap: 48px; width: min(650px, calc(100% - 40px)); padding-top: 35px; }
   .hero-copy h1 { font-size: clamp(54px, 13vw, 86px); }
-  .game-screen { display: block; }
-  .play-layout { display: block; }
-  .map-column { height: 62svh; min-height: 320px; }
-  .answer-panel { min-height: 0; }
+  .play-layout { display: block; position: relative; min-height: 0; }
+  .map-column { position: absolute; inset: 0; height: auto; min-height: 0; }
   .game-header { grid-template-columns: 1fr; gap: 10px; }
   .game-stats { justify-content: space-between; }
   .round-progress > span, .game-stats > span { text-align: left; }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .answer-panel--sheet {
+    --peek: 214px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    height: min(78%, 640px);
+    padding: 0 16px 16px;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -12px 28px rgba(23, 39, 42, .12);
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .answer-panel--sheet.is-expanded { overflow-y: auto; }
+
+  .answer-panel--sheet .sheet-grab {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--white);
+  }
+
+  .answer-panel--sheet .question-heading h1,
+  .answer-panel--sheet .reveal-panel h1 { font-size: 26px; }
+  .answer-panel--sheet .question-heading > span { display: none; }
+  .answer-panel--sheet .guess-form { margin-top: 12px; }
+  .answer-panel--sheet .biography { font-size: 16px; }
 }
 
 @media (max-width: 760px) {
@@ -762,8 +876,6 @@ button:focus-visible, input:focus-visible {
   .game-stats { gap: 12px; flex-wrap: wrap; }
   .difficulty-chip { font-size: 11px; }
   .round-progress > span { font-size: 12px; }
-  .map-column { height: 58svh; min-height: 280px; }
-  .answer-panel { padding: 24px 16px 32px; }
   .question-heading h1, .reveal-panel h1 { font-size: 32px; }
   .guess-form input, .primary-action, .round-tools button { min-height: 48px; }
   .map-place-names { max-width: calc(100% - 24px); white-space: normal; width: max-content; bottom: 62px; }
@@ -780,9 +892,11 @@ button:focus-visible, input:focus-visible {
 @media (max-width: 900px) and (orientation: landscape) {
   .play-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(280px, .8fr);
+    position: static;
+    grid-template-columns: minmax(0, 1.25fr) minmax(260px, .85fr);
   }
-  .map-column { height: 72svh; min-height: 280px; }
+  .map-column { position: relative; inset: auto; }
+  .answer-panel { overflow-y: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

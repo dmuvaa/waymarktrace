@@ -26,6 +26,7 @@ import type {
 import { hiddenHintText } from "@/lib/game/hints";
 import type { RoundState } from "@/types/game";
 import { SiteChrome, type SiteScreen } from "@/components/site/SiteChrome";
+import { AnswerSheet } from "./AnswerSheet";
 import { GameMap } from "./GameMap";
 
 type Feedback = { tone: "neutral" | "error" | "success"; message: string } | null;
@@ -46,6 +47,7 @@ export function WaymarktraceGame() {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
+  const [sheetNudge, setSheetNudge] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -88,13 +90,11 @@ export function WaymarktraceGame() {
     setIncorrectGuesses(0);
     setResolution(null);
     setFeedback(null);
+    setSheetNudge(0);
   };
 
   const startGame = (selectedDifficulty = difficulty) => {
-    const nextSession = createSession(
-      selectedDifficulty,
-      historicalFigures.map((item) => item.id),
-    );
+    const nextSession = createSession(selectedDifficulty, historicalFigures);
     setSession(nextSession);
     setDifficulty(selectedDifficulty);
     savePreferredDifficulty(selectedDifficulty);
@@ -220,6 +220,7 @@ export function WaymarktraceGame() {
       incorrectGuesses,
     });
     setFeedback(null);
+    setSheetNudge((value) => value + 1);
   };
 
   const showHiddenHint = () => {
@@ -232,6 +233,7 @@ export function WaymarktraceGame() {
       incorrectGuesses,
     });
     setFeedback(null);
+    setSheetNudge((value) => value + 1);
   };
 
   const nextRound = () => {
@@ -277,15 +279,15 @@ export function WaymarktraceGame() {
             </article>
             <article>
               <h2>Use the map</h2>
-              <p>Pan and zoom to inspect coastlines, islands, and distances. Reframe clues returns to the opening view. Easy shows borders and labels, Medium removes the labels, Hard removes borders, and Super hard leaves the bare land and water.</p>
+              <p>Pan and zoom to inspect coastlines, islands, and distances. Reframe clues returns to the opening view. Easy asks about well-known figures and shows borders and labels. Medium asks about familiar figures and removes the labels. Hard asks about lesser-known figures and removes borders. Super hard asks about obscure figures and leaves the bare land and water.</p>
             </article>
             <article>
               <h2>Name the figure</h2>
-              <p>Small spelling differences still count. A wrong guess lets you try again. Each ordinary hint lowers the round score by 20%, up to 60%. The hidden hint can be opened once for that figure.</p>
+              <p>Small spelling differences still count. A wrong guess lets you try again. Hint icons sit at the top right of the map, beside the zoom controls. Each ordinary hint lowers the round score by 20%, up to 60%. The hidden hint can be opened once for that figure.</p>
             </article>
           </div>
           <button className="primary-action guide-play" type="button" onClick={() => openScreen("home")}>
-            Choose a map
+            Choose a difficulty
           </button>
         </section>
       </main>,
@@ -310,7 +312,7 @@ export function WaymarktraceGame() {
           </div>
 
           <div className="start-panel">
-            <h2>Choose your map</h2>
+            <h2>Choose a difficulty</h2>
             <div className="difficulty-list" role="radiogroup" aria-label="Difficulty">
               {difficultyOrder.map((level) => {
                 const item = difficultyDetails[level];
@@ -390,7 +392,6 @@ export function WaymarktraceGame() {
   }
 
   const currentHints = [figure.hints.category, figure.hints.century, figure.hints.clue].slice(0, regularHints);
-  const nextHintScore = calculateRoundScore(session.difficulty, Math.min(hintCount + 1, 4));
 
   return frame(
     <main className="game-screen">
@@ -412,10 +413,18 @@ export function WaymarktraceGame() {
 
       <section className="play-layout">
         <div className="map-column">
-          <GameMap figure={figure} difficulty={session.difficulty} resolved={Boolean(resolution)} />
+          <GameMap
+            figure={figure}
+            difficulty={session.difficulty}
+            resolved={Boolean(resolution)}
+            hintsDisabled={regularHints >= 3}
+            hiddenHintDisabled={hiddenHintUsed}
+            onHint={showNextHint}
+            onHiddenHint={showHiddenHint}
+          />
         </div>
 
-        <aside className="answer-panel">
+        <AnswerSheet key={figure.id} openToken={(resolution ? 1 : 0) + sheetNudge}>
           {!resolution ? (
             <>
               <div className="question-heading">
@@ -424,19 +433,16 @@ export function WaymarktraceGame() {
                 <span>Use the locations and dates on the map.</span>
               </div>
 
-              {(hiddenHintUsed || currentHints.length > 0) && (
-                <div className="hints" aria-label="Revealed hints">
-                  {hiddenHintUsed && <p><b>Hidden hint</b>{hiddenHintText(figure.name)}</p>}
-                  {currentHints.map((hint, index) => <p key={hint}><b>Hint {index + 1}</b>{hint}</p>)}
-                </div>
-              )}
-
               <form onSubmit={submitGuess} className="guess-form">
                 <label htmlFor="guess">Historical figure</label>
                 <input
                   id="guess"
                   value={guess}
-                  onChange={(event) => setGuess(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (feedback?.tone === "error" && value.length < guess.length) setFeedback(null);
+                    setGuess(value);
+                  }}
                   placeholder="Type a name"
                   autoComplete="off"
                   autoCorrect="off"
@@ -446,17 +452,18 @@ export function WaymarktraceGame() {
                     {feedback.message}
                   </p>
                 )}
-                <button className="primary-action" type="submit">Guess the figure</button>
+                <button className="primary-action sheet-anchor" type="submit">Guess the figure</button>
               </form>
 
+              {(hiddenHintUsed || currentHints.length > 0) && (
+                <div className="hints" aria-label="Revealed hints">
+                  {hiddenHintUsed && <p><b>Hidden hint</b>{hiddenHintText(figure.name)}</p>}
+                  {currentHints.map((hint, index) => <p key={hint}><b>Hint {index + 1}</b>{hint}</p>)}
+                </div>
+              )}
+
               <div className="round-tools">
-                <button type="button" onClick={showNextHint} disabled={regularHints >= 3}>
-                  {regularHints >= 3 ? "All hints used" : `Get a hint · max ${nextHintScore} pts`}
-                </button>
                 <button type="button" onClick={() => resolveRound("skipped")}>Skip round</button>
-                <button type="button" onClick={showHiddenHint} disabled={hiddenHintUsed}>
-                  {hiddenHintUsed ? "Hidden hint used" : `Hidden hint, once · max ${nextHintScore} pts`}
-                </button>
               </div>
               <button className="reveal-action" type="button" onClick={() => resolveRound("revealed")}>
                 Reveal answer
@@ -475,12 +482,12 @@ export function WaymarktraceGame() {
                 <div><dt>Died</dt><dd>{figure.deathLocation.name}</dd></div>
               </dl>
               {feedback && <p className={`feedback feedback--${feedback.tone}`} role="status">{feedback.message}</p>}
-              <button className="primary-action" type="button" onClick={nextRound}>
+              <button className="primary-action sheet-anchor" type="button" onClick={nextRound}>
                 {session.roundIndex === session.figureIds.length - 1 ? "See results" : "Next figure"}
               </button>
             </div>
           )}
-        </aside>
+        </AnswerSheet>
       </section>
     </main>,
   );

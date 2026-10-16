@@ -1,9 +1,14 @@
+import { normalizeName } from "@/lib/game/answer-matching";
+import { recognitionFor } from "@/lib/game/recognition";
 import type { HistoricalFigure } from "@/types/game";
+import { addedMediumFigures } from "./added-medium-figures";
 import generatedFigures from "./generated-figures.json";
+
+type FigureRecord = Omit<HistoricalFigure, "recognition">;
 
 const source = (slug: string) => [`https://en.wikipedia.org/wiki/${slug}`];
 
-const curatedHistoricalFigures: HistoricalFigure[] = [
+const curatedHistoricalFigures: FigureRecord[] = [
   {
     id: "napoleon-bonaparte",
     name: "Napoleon Bonaparte",
@@ -424,20 +429,45 @@ const curatedHistoricalFigures: HistoricalFigure[] = [
     hints: { category: "Painter", century: "Born in the 16th century", clue: "She became one of the first women admitted to Florence’s art academy." },
     sources: source("Artemisia_Gentileschi"),
   },
+  ...addedMediumFigures,
 ];
 
-const curatedNames = new Set(
-  curatedHistoricalFigures.map((figure) => figure.name.toLocaleLowerCase("en")),
-);
 const curatedIds = new Set(curatedHistoricalFigures.map((figure) => figure.id));
+const curatedNameKeys = new Set<string>();
+for (const figure of curatedHistoricalFigures) {
+  curatedNameKeys.add(normalizeName(figure.name));
+  for (const alias of figure.aliases) {
+    const key = normalizeName(alias);
+    if (key.length >= 8) curatedNameKeys.add(key);
+  }
+}
+
+const generatedRecords = generatedFigures as FigureRecord[];
+const fameRankByName = new Map<string, number>();
+generatedRecords.forEach((figure, index) => {
+  const key = normalizeName(figure.name);
+  if (!fameRankByName.has(key)) fameRankByName.set(key, index);
+});
+
+function fameRankFor(figure: FigureRecord) {
+  const ranks = [figure.name, ...figure.aliases]
+    .map((name) => fameRankByName.get(normalizeName(name)))
+    .filter((rank): rank is number => rank != null);
+  return ranks.length ? Math.min(...ranks) : null;
+}
+
+function withRecognition(figure: FigureRecord): HistoricalFigure {
+  return {
+    ...figure,
+    recognition: recognitionFor([figure.name, ...figure.aliases], fameRankFor(figure)),
+  };
+}
 
 export const historicalFigures: HistoricalFigure[] = [
   ...curatedHistoricalFigures,
-  ...(generatedFigures as HistoricalFigure[]).filter(
-    (figure) =>
-      !curatedIds.has(figure.id) &&
-      !curatedNames.has(figure.name.toLocaleLowerCase("en")),
+  ...generatedRecords.filter(
+    (figure) => !curatedIds.has(figure.id) && !curatedNameKeys.has(normalizeName(figure.name)),
   ),
-].slice(0, 500);
+].map(withRecognition);
 
 export const figureById = new Map(historicalFigures.map((figure) => [figure.id, figure]));

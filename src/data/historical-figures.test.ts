@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { historicalFigures } from "./historical-figures";
 
 describe("historical figure dataset", () => {
-  it("contains 500 unique playable figures", () => {
-    expect(historicalFigures).toHaveLength(500);
-    expect(new Set(historicalFigures.map((figure) => figure.id)).size).toBe(500);
+  it("contains unique playable figures", () => {
+    expect(historicalFigures.length).toBeGreaterThanOrEqual(500);
+    expect(new Set(historicalFigures.map((figure) => figure.id)).size).toBe(historicalFigures.length);
   });
 
   it("includes complete coordinates and source references", () => {

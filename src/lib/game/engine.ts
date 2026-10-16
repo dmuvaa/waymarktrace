@@ -9,22 +9,22 @@ export const difficultyDetails: Record<
   easy: {
     label: "Easy",
     multiplier: 1,
-    description: "Borders, countries, and city labels",
+    description: "Well-known figures, with borders and labels",
   },
   medium: {
     label: "Medium",
     multiplier: 1.5,
-    description: "Borders and coastlines, no labels",
+    description: "Familiar figures, borders and coastlines, no labels",
   },
   hard: {
     label: "Hard",
     multiplier: 2,
-    description: "Land and coastlines only",
+    description: "Lesser-known figures, land and coastlines only",
   },
   "super-hard": {
     label: "Super hard",
     multiplier: 3,
-    description: "Bare silhouettes and tougher figures",
+    description: "Obscure figures, bare silhouettes",
   },
 };
 
@@ -42,13 +42,18 @@ export function selectFigureIds(allIds: string[], count = SESSION_LENGTH) {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-export function createSession(difficulty: Difficulty, allIds: string[]): GameSession {
-  const eligibleIds =
-    difficulty === "super-hard"
-      ? allIds.slice(Math.floor(allIds.length * 0.35))
-      : difficulty === "hard"
-        ? allIds.slice(Math.floor(allIds.length * 0.1))
-        : allIds;
+export function idsForDifficulty(
+  figures: { id: string; recognition: Difficulty }[],
+  difficulty: Difficulty,
+) {
+  return figures.filter((figure) => figure.recognition === difficulty).map((figure) => figure.id);
+}
+
+export function createSession(
+  difficulty: Difficulty,
+  figures: { id: string; recognition: Difficulty }[],
+): GameSession {
+  const eligibleIds = idsForDifficulty(figures, difficulty);
   return {
     version: 1,
     id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`,

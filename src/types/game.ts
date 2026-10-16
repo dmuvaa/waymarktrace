@@ -23,6 +23,7 @@ export type HistoricalFigure = {
     clue: string;
   };
   sources: string[];
+  recognition: Difficulty;
 };
 
 export type Resolution = "correct" | "revealed" | "skipped";
