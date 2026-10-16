@@ -194,7 +194,7 @@ export function WaymarktraceGame() {
     if (result.status === "ambiguous") {
       setFeedback({
         tone: "error",
-        message: "That name could refer to more than one person. Try a fuller name.",
+        message: "That name could refer to more than one historical figure. Try a fuller name.",
       });
       return;
     }
@@ -269,11 +269,11 @@ export function WaymarktraceGame() {
       <main className="guide-screen">
         <section className="guide">
           <p className="kicker">How it works</p>
-          <h1>Follow the years across the map.</h1>
+          <h1>Trace the historical figure on the map.</h1>
           <div className="guide-steps">
             <article>
               <h2>Read the two markers</h2>
-              <p>The green circle is the birth year and birthplace. The red circle is the death year and deathplace. The person’s name stays hidden.</p>
+              <p>The green circle is the birth place and year. The red circle is the death place and year. The historical figure stays hidden.</p>
             </article>
             <article>
               <h2>Use the map</h2>
@@ -298,11 +298,10 @@ export function WaymarktraceGame() {
       <main className="home-screen">
         <section className="home-hero">
           <div className="hero-copy">
-            <p className="kicker">Two places. Two years. One life.</p>
-            <h1>Read the map.<br />Name the person.</h1>
+            <p className="kicker">Birth place. Death place. Two years.</p>
+            <h1>Read the map.<br />Name the historical figure.</h1>
             <p className="hero-intro">
-              Trace a life from its beginning to its end, then use the years and geography
-              to identify the historical figure.
+              Trace the historical figure given their birth and death places, alongside the respective years.
             </p>
             <div className="clue-key" aria-label="Map clue key">
               <span><i className="key-ring key-ring--birth" />Birth place + year</span>
@@ -361,7 +360,7 @@ export function WaymarktraceGame() {
           <p className="kicker">Expedition complete</p>
           <h1>{session.score} points</h1>
           <p className="results-lede">
-            You identified {correct} of {session.results.length} lives on{" "}
+            You identified {correct} of {session.results.length} historical figures on{" "}
             {difficultyDetails[session.difficulty].label}.
           </p>
           <div className="results-stats">
@@ -420,7 +419,7 @@ export function WaymarktraceGame() {
           {!resolution ? (
             <>
               <div className="question-heading">
-                <p>Follow the years</p>
+                <p>Birth and death places</p>
                 <h1>Who is this Historical Figure?</h1>
                 <span>Use the locations and dates on the map.</span>
               </div>
@@ -477,7 +476,7 @@ export function WaymarktraceGame() {
               </dl>
               {feedback && <p className={`feedback feedback--${feedback.tone}`} role="status">{feedback.message}</p>}
               <button className="primary-action" type="button" onClick={nextRound}>
-                {session.roundIndex === session.figureIds.length - 1 ? "See results" : "Next life"}
+                {session.roundIndex === session.figureIds.length - 1 ? "See results" : "Next figure"}
               </button>
             </div>
           )}

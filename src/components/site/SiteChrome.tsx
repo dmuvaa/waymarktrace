@@ -4,16 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 
 export type SiteScreen = "home" | "guide" | "game" | "results";
 
-function CompassMark() {
-  return (
-    <svg viewBox="0 0 42 42" aria-hidden="true">
-      <circle cx="21" cy="21" r="18.5" />
-      <path d="M26.8 14.1 23.4 23.4 14.1 26.8l3.4-9.3 9.3-3.4Z" />
-      <circle cx="21" cy="21" r="2" />
-    </svg>
-  );
-}
-
 type SiteChromeProps = {
   current: SiteScreen;
   onHome: () => void;
@@ -43,7 +33,7 @@ export function SiteChrome({ current, onHome, onGuide, onPlay, children }: SiteC
     <div className={`site-frame${current === "game" ? " site-frame--game" : ""}`}>
       <header className="navbar">
         <button className="brand" type="button" onClick={() => choose(onHome)}>
-          <CompassMark />
+          <img src="/logo.svg" alt="" width="32" height="32" />
           <span>waymarktrace</span>
         </button>
         <button
@@ -84,7 +74,7 @@ export function SiteChrome({ current, onHome, onGuide, onPlay, children }: SiteC
       <footer className="site-footer">
         <div>
           <strong>waymarktrace</strong>
-          <p>Two places and two years. The name stays hidden until you find it.</p>
+          <p>Birth and death places, with the years. The historical figure stays hidden until you name them.</p>
         </div>
         <div className="footer-links">
           <button type="button" onClick={() => choose(onPlay)}>Play</button>

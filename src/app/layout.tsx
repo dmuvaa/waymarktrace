@@ -14,9 +14,9 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Waymarktrace — Read the map. Name the person.",
+  title: "Waymarktrace — Name the historical figure.",
   description:
-    "A map-based history game. Identify notable lives from their birth and death places.",
+    "Trace the historical figure given their birth and death places, alongside the respective years.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
