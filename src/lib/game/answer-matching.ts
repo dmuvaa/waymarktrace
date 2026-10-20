@@ -31,6 +31,70 @@ function adaptiveThreshold(length: number) {
   return 0.76;
 }
 
+const NAME_PARTICLES = new Set([
+  "and",
+  "da",
+  "de",
+  "del",
+  "della",
+  "den",
+  "der",
+  "di",
+  "du",
+  "ii",
+  "iii",
+  "iv",
+  "ix",
+  "jr",
+  "la",
+  "le",
+  "les",
+  "of",
+  "sr",
+  "st",
+  "ten",
+  "ter",
+  "the",
+  "van",
+  "vi",
+  "vii",
+  "viii",
+  "von",
+  "xi",
+]);
+
+function significantTokens(value: string) {
+  return tokens(value).filter((token) => token.length >= 4 && !NAME_PARTICLES.has(token));
+}
+
+function tokensClose(guessToken: string, nameToken: string) {
+  const threshold = adaptiveThreshold(Math.max(guessToken.length, nameToken.length));
+  return similarity(guessToken, nameToken) >= threshold;
+}
+
+function matchSingleName(
+  guess: string,
+  target: HistoricalFigure,
+  dataset: HistoricalFigure[],
+): MatchResult | null {
+  if (target.recognition !== "easy" && target.recognition !== "medium") return null;
+
+  const guessed = tokens(guess);
+  if (guessed.length !== 1 || guessed[0].length < 4) return null;
+
+  const token = guessed[0];
+  const owners = dataset.filter((figure) =>
+    significantTokens([figure.name, ...figure.aliases].join(" ")).some((nameToken) =>
+      tokensClose(token, nameToken),
+    ),
+  );
+  if (!owners.some((figure) => figure.id === target.id)) return null;
+  if (owners.length > 1) return { status: "ambiguous", fuzzy: false };
+
+  const exact = significantTokens([target.name, ...target.aliases].join(" ")).includes(token);
+  return { status: "correct", fuzzy: !exact };
+}
+
 function isTokenMatch(guess: string, candidate: string) {
   const guessed = tokens(guess);
   const expected = tokens(candidate);
@@ -71,6 +135,9 @@ export function matchAnswer(
     [figure.name, ...figure.aliases].some((name) => normalizeName(name) === normalized),
   );
   if (exactOwners.length > 1) return { status: "ambiguous", fuzzy: false };
+
+  const singleName = matchSingleName(normalized, target, dataset);
+  if (singleName) return singleName;
 
   const targetConfidence = candidateConfidence(normalized, target);
   const threshold = adaptiveThreshold(normalized.length);

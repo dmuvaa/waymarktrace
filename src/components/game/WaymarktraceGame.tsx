@@ -452,7 +452,7 @@ export function WaymarktraceGame() {
                     {feedback.message}
                   </p>
                 )}
-                <button className="primary-action sheet-anchor" type="submit">Guess the figure</button>
+                <button className="primary-action sheet-anchor" type="submit">Submit Guess</button>
               </form>
 
               {(hiddenHintUsed || currentHints.length > 0) && (
