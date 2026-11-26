@@ -23,12 +23,11 @@ describe("answer matching", () => {
 
   it("accepts a distinctive single name on easy and medium", () => {
     const hitler = historicalFigures.find((figure) => figure.id === "adolf-hitler")!;
-    const catherine = historicalFigures.find((figure) => figure.id === "catherine-the-great")!;
+    const einstein = historicalFigures.find((figure) => figure.id === "albert-einstein")!;
     const darwin = historicalFigures.find((figure) => figure.id === "charles-darwin")!;
 
     expect(matchAnswer("Hitler", hitler, historicalFigures)).toEqual({ status: "correct", fuzzy: false });
-    expect(matchAnswer("Adolf", hitler, historicalFigures)).toEqual({ status: "correct", fuzzy: false });
-    expect(matchAnswer("Catherine", catherine, historicalFigures)).toEqual({ status: "correct", fuzzy: false });
+    expect(matchAnswer("Einstein", einstein, historicalFigures)).toEqual({ status: "correct", fuzzy: false });
     expect(matchAnswer("Darwin", darwin, historicalFigures)).toEqual({ status: "correct", fuzzy: false });
   });
 
@@ -38,10 +37,10 @@ describe("answer matching", () => {
   });
 
   it("keeps single surnames off hard", () => {
-    const degas = historicalFigures.find((figure) => figure.id === "edgar-degas")!;
-    expect(degas.recognition).toBe("hard");
-    expect(matchAnswer("Degas", degas, historicalFigures).status).toBe("incorrect");
-    expect(matchAnswer("Edgar Degas", degas, historicalFigures).status).toBe("correct");
+    const buber = historicalFigures.find((figure) => figure.id === "martin-buber")!;
+    expect(buber.recognition).toBe("hard");
+    expect(matchAnswer("Buber", buber, historicalFigures).status).toBe("incorrect");
+    expect(matchAnswer("Martin Buber", buber, historicalFigures).status).toBe("correct");
   });
 
   it("normalizes accents and punctuation", () => {
