@@ -1,27 +1,41 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
-import { historicalFigures, figureById } from "@/data/historical-figures";
+import type { HistoricalFigure } from "@/types/game";
 import { matchAnswer } from "@/lib/game/answer-matching";
+import { eraDetails, fieldDetails, worldRegionDetails } from "@/lib/game/classify";
 import {
   calculateRoundScore,
   createSession,
+  defaultSetup,
   difficultyDetails,
+  difficultyOrder,
+  eligiblePool,
   getAccuracy,
+  isStandardGame,
+  matchesTheme,
+  ROUND_OPTIONS,
+  shuffle,
 } from "@/lib/game/engine";
 import {
+  clearSeen,
   getBestScores,
-  loadPreferredDifficulty,
+  loadSeen,
   loadSession,
+  loadSetup,
+  markSeen,
   recordBestScore,
-  savePreferredDifficulty,
   saveSession,
+  saveSetup,
 } from "@/lib/game/persistence";
 import type {
-  Difficulty,
+  Era,
+  Field,
   GameSession,
+  GameSetup,
   Resolution,
   RoundResult,
+  WorldRegion,
 } from "@/types/game";
 import { hiddenHintText } from "@/lib/game/hints";
 import type { RoundState } from "@/types/game";
@@ -31,12 +45,36 @@ import { GameMap } from "./GameMap";
 
 type Feedback = { tone: "neutral" | "error" | "success"; message: string } | null;
 
-const difficultyOrder: Difficulty[] = ["easy", "medium", "hard", "super-hard"];
-const validFigureIds = new Set(historicalFigures.map((figure) => figure.id));
+type Dataset = {
+  figures: HistoricalFigure[];
+  byId: Map<string, HistoricalFigure>;
+  validIds: Set<string>;
+};
+
+const eraOrder = Object.keys(eraDetails) as Era[];
+const fieldOrder = Object.keys(fieldDetails) as Field[];
+const regionOrder = Object.keys(worldRegionDetails) as WorldRegion[];
+
+function displayYear(year: number) {
+  return year < 0 ? `${Math.abs(year)} BCE` : `${year}`;
+}
+
+function themeLabel(setup: GameSetup) {
+  const parts = [
+    setup.era !== "any" && eraDetails[setup.era].label,
+    setup.field !== "any" && fieldDetails[setup.field].label,
+    setup.region !== "any" && worldRegionDetails[setup.region].label,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "All of history";
+}
 
 export function WaymarktraceGame() {
   const [screen, setScreen] = useState<SiteScreen>("home");
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [data, setData] = useState<Dataset | null>(null);
+  const [setup, setSetup] = useState<GameSetup>(defaultSetup);
+  const [seen, setSeen] = useState<Map<string, number>>(new Map());
+  const [newBest, setNewBest] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [session, setSession] = useState<GameSession | null>(null);
   const [savedSession, setSavedSession] = useState<GameSession | null>(null);
   const [guess, setGuess] = useState("");
@@ -51,11 +89,18 @@ export function WaymarktraceGame() {
 
   useEffect(() => {
     let active = true;
-    queueMicrotask(() => {
+    // The dataset (~4,000 figures) is its own chunk so the page shell paints first.
+    import("@/data/historical-figures").then(({ historicalFigures, figureById }) => {
       if (!active) return;
-      setDifficulty(loadPreferredDifficulty());
-      setSavedSession(loadSession(validFigureIds));
+      const validIds = new Set(historicalFigures.map((item) => item.id));
+      setData({ figures: historicalFigures, byId: figureById, validIds });
+      setSetup(loadSetup());
+      setSeen(loadSeen());
+      setSavedSession(loadSession(validIds));
       setHydrated(true);
+    }).catch((error: unknown) => {
+      console.error("Could not load the historical figures", error);
+      if (active) setLoadFailed(true);
     });
     return () => {
       active = false;
@@ -63,9 +108,9 @@ export function WaymarktraceGame() {
   }, []);
 
   const figure = useMemo(() => {
-    if (!session) return null;
-    return figureById.get(session.figureIds[session.roundIndex]) ?? null;
-  }, [session]);
+    if (!session || !data) return null;
+    return data.byId.get(session.figureIds[session.roundIndex]) ?? null;
+  }, [session, data]);
 
   const hintCount = regularHints + (hiddenHintUsed ? 1 : 0);
 
@@ -93,11 +138,24 @@ export function WaymarktraceGame() {
     setSheetNudge(0);
   };
 
-  const startGame = (selectedDifficulty = difficulty) => {
-    const nextSession = createSession(selectedDifficulty, historicalFigures);
+  const updateSetup = (patch: Partial<GameSetup>) => {
+    setSetup((current) => {
+      const next = { ...current, ...patch };
+      saveSetup(next);
+      return next;
+    });
+  };
+
+  const startGame = (chosen = setup) => {
+    if (!data) return;
+    const latestSeen = loadSeen();
+    setSeen(latestSeen);
+    const nextSession = createSession(chosen, data.figures, latestSeen);
+    if (!nextSession.figureIds.length) return;
     setSession(nextSession);
-    setDifficulty(selectedDifficulty);
-    savePreferredDifficulty(selectedDifficulty);
+    setSetup(chosen);
+    saveSetup(chosen);
+    setNewBest(false);
     setStorageWarning(!saveSession(nextSession));
     setSavedSession(null);
     resetRound();
@@ -108,7 +166,7 @@ export function WaymarktraceGame() {
   const resumeGame = () => {
     if (!savedSession) return;
     setSession(savedSession);
-    setDifficulty(savedSession.difficulty);
+    setSetup(savedSession.setup);
     const savedResult = savedSession.results.at(-1);
     const currentFigureId = savedSession.figureIds[savedSession.roundIndex];
     if (savedResult?.figureId === currentFigureId) {
@@ -142,7 +200,7 @@ export function WaymarktraceGame() {
 
   const resolveRound = (kind: Resolution) => {
     if (!session || !figure || resolution) return;
-    const points = kind === "correct" ? calculateRoundScore(session.difficulty, hintCount) : 0;
+    const points = kind === "correct" ? calculateRoundScore(figure.recognition, hintCount) : 0;
     const result: RoundResult = {
       figureId: figure.id,
       resolution: kind,
@@ -162,6 +220,7 @@ export function WaymarktraceGame() {
     setSession(updated);
     setResolution(kind);
     saveSession(updated);
+    markSeen(figure.id);
     setFeedback(
       kind === "correct"
         ? { tone: "success", message: `Correct. You earned ${points} points.` }
@@ -180,7 +239,7 @@ export function WaymarktraceGame() {
       return;
     }
 
-    const result = matchAnswer(guess, figure, historicalFigures);
+    const result = matchAnswer(guess, figure, data?.figures ?? [figure]);
     if (result.status === "correct") {
       resolveRound("correct");
       if (result.fuzzy) {
@@ -240,7 +299,8 @@ export function WaymarktraceGame() {
     if (!session || !resolution) return;
     const isFinal = session.roundIndex === session.figureIds.length - 1;
     if (isFinal) {
-      recordBestScore(session.difficulty, session.score);
+      setNewBest(isStandardGame(session.setup) && recordBestScore(session.setup.difficulty, session.score));
+      setSeen(loadSeen());
       saveSession(null);
       setScreen("results");
       window.scrollTo({ top: 0 });
@@ -264,7 +324,15 @@ export function WaymarktraceGame() {
     </SiteChrome>
   );
 
-  if (!hydrated) return <main className="boot-screen">waymarktrace</main>;
+  if (loadFailed) {
+    return (
+      <main className="boot-screen">
+        <p>The figures could not be loaded.</p>
+        <button className="text-action" type="button" onClick={() => window.location.reload()}>Try again</button>
+      </main>
+    );
+  }
+  if (!hydrated || !data) return <main className="boot-screen">waymarktrace</main>;
 
   if (screen === "guide") {
     return frame(
@@ -278,16 +346,16 @@ export function WaymarktraceGame() {
               <p>The green circle is the birth place and year. The red circle is the death place and year. The historical figure stays hidden.</p>
             </article>
             <article>
-              <h2>Use the map</h2>
-              <p>Pan and zoom to inspect coastlines, islands, and distances. Reframe clues returns to the opening view. Easy asks about well-known figures and shows borders and labels. Medium asks about familiar figures and removes the labels. Hard asks about lesser-known figures and removes borders. Super hard asks about obscure figures and leaves the bare land and water.</p>
+              <h2>Pick your game</h2>
+              <p>Easy asks about household names and shows borders and labels. Medium removes the labels, Hard removes borders, and Super hard leaves bare land and water. Narrow any game to an era, a field, or a part of the world, or let Surprise me pick a theme. Figures you have already met are held back until you have seen the rest of the pool.</p>
             </article>
             <article>
               <h2>Name the figure</h2>
-              <p>Small spelling differences still count. A wrong guess lets you try again. Hint icons sit at the top right of the map, beside the zoom controls. Each ordinary hint lowers the round score by 20%, up to 60%. The hidden hint can be opened once for that figure.</p>
+              <p>Small spelling differences still count. A wrong guess lets you try again. Hints sit at the top right of the map: what they did, where they belonged, then a closer clue. Each lowers the round score by 20%, up to 60%. The hidden hint gives the first letter.</p>
             </article>
           </div>
           <button className="primary-action guide-play" type="button" onClick={() => openScreen("home")}>
-            Choose a difficulty
+            Set up a game
           </button>
         </section>
       </main>,
@@ -296,6 +364,33 @@ export function WaymarktraceGame() {
 
   if (screen === "home") {
     const scores = getBestScores();
+    const themed = data.figures.filter((item) => matchesTheme(item, setup));
+    const pool = eligiblePool(data.figures, setup);
+    const fresh = pool.filter((item) => !seen.has(item.id)).length;
+    const rounds = Math.min(setup.rounds, pool.length);
+    const themeCount = (patch: Partial<GameSetup>) =>
+      data.figures.filter((item) => matchesTheme(item, { ...setup, ...patch })).length;
+
+    const surprise = () => {
+      // A random era, field or region (sometimes two) with enough figures for the game.
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const dimensions = shuffle(["era", "field", "region"] as const).slice(0, Math.random() < 0.35 ? 2 : 1);
+        const patch: Partial<GameSetup> = { era: "any", field: "any", region: "any" };
+        for (const dimension of dimensions) {
+          if (dimension === "era") patch.era = shuffle(eraOrder)[0];
+          if (dimension === "field") patch.field = shuffle(fieldOrder)[0];
+          if (dimension === "region") patch.region = shuffle(regionOrder)[0];
+        }
+        const candidate = { ...setup, ...patch };
+        const sameAsNow =
+          candidate.era === setup.era && candidate.field === setup.field && candidate.region === setup.region;
+        if (!sameAsNow && eligiblePool(data.figures, candidate).length >= setup.rounds * 2) {
+          updateSetup(patch);
+          return;
+        }
+      }
+    };
+
     return frame(
       <main className="home-screen">
         <section className="home-hero">
@@ -304,6 +399,7 @@ export function WaymarktraceGame() {
             <h1>Read the map.<br />Name the historical figure.</h1>
             <p className="hero-intro">
               Trace the historical figure given their birth and death places, alongside the respective years.
+              More than {(Math.floor(data.figures.length / 100) * 100).toLocaleString("en")} figures from every era and corner of the world.
             </p>
             <div className="clue-key" aria-label="Map clue key">
               <span><i className="key-ring key-ring--birth" />Birth place + year</span>
@@ -312,7 +408,7 @@ export function WaymarktraceGame() {
           </div>
 
           <div className="start-panel">
-            <h2>Choose a difficulty</h2>
+            <h2>Set up a game</h2>
             <div className="difficulty-list" role="radiogroup" aria-label="Difficulty">
               {difficultyOrder.map((level) => {
                 const item = difficultyDetails[level];
@@ -321,9 +417,9 @@ export function WaymarktraceGame() {
                     key={level}
                     type="button"
                     role="radio"
-                    aria-checked={difficulty === level}
-                    className={`difficulty-option${difficulty === level ? " is-selected" : ""}`}
-                    onClick={() => setDifficulty(level)}
+                    aria-checked={setup.difficulty === level}
+                    className={`difficulty-option${setup.difficulty === level ? " is-selected" : ""}`}
+                    onClick={() => updateSetup({ difficulty: level })}
                   >
                     <span className="difficulty-radio" />
                     <span>
@@ -335,16 +431,108 @@ export function WaymarktraceGame() {
                 );
               })}
             </div>
-            <button className="primary-action" type="button" onClick={() => startGame()}>
-              Start a 10-round game
+
+            <div className="theme-panel">
+              <div className="theme-heading">
+                <span>Theme</span>
+                <button type="button" className="text-action" onClick={surprise}>Surprise me</button>
+                {themed.length !== data.figures.length && (
+                  <button
+                    type="button"
+                    className="text-action"
+                    onClick={() => updateSetup({ era: "any", field: "any", region: "any" })}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <label>
+                <span>Era</span>
+                <select value={setup.era} onChange={(event) => updateSetup({ era: event.target.value as GameSetup["era"] })}>
+                  <option value="any">Any era</option>
+                  {eraOrder.map((era) => (
+                    <option key={era} value={era} disabled={themeCount({ era }) === 0}>
+                      {eraDetails[era].label} ({eraDetails[era].span})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Field</span>
+                <select value={setup.field} onChange={(event) => updateSetup({ field: event.target.value as GameSetup["field"] })}>
+                  <option value="any">Any field</option>
+                  {fieldOrder.map((field) => (
+                    <option key={field} value={field} disabled={themeCount({ field }) === 0}>
+                      {fieldDetails[field].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Region</span>
+                <select value={setup.region} onChange={(event) => updateSetup({ region: event.target.value as GameSetup["region"] })}>
+                  <option value="any">Anywhere</option>
+                  {regionOrder.map((region) => (
+                    <option key={region} value={region} disabled={themeCount({ region }) === 0}>
+                      {worldRegionDetails[region].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="round-options" role="radiogroup" aria-label="Rounds">
+                <span>Rounds</span>
+                {ROUND_OPTIONS.map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    role="radio"
+                    aria-checked={setup.rounds === count}
+                    className={setup.rounds === count ? "is-selected" : ""}
+                    onClick={() => updateSetup({ rounds: count })}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="pool-note" aria-live="polite">
+              {pool.length === 0
+                ? "No figures match this theme yet. Try widening it."
+                : <>
+                    <strong>{pool.length.toLocaleString("en")}</strong> figures in this pool
+                    {" · "}
+                    <strong>{fresh.toLocaleString("en")}</strong> you haven’t met
+                    {pool.some((item) => item.recognition !== setup.difficulty) &&
+                      " · some borrowed from nearby tiers"}
+                  </>}
+            </p>
+
+            <button className="primary-action" type="button" disabled={pool.length === 0} onClick={() => startGame()}>
+              Start a {rounds}-round game
             </button>
             {savedSession && (
               <button className="text-action resume-action" type="button" onClick={resumeGame}>
-                Resume round {savedSession.roundIndex + 1} · {difficultyDetails[savedSession.difficulty].label}
+                Resume round {savedSession.roundIndex + 1} · {difficultyDetails[savedSession.setup.difficulty].label} · {themeLabel(savedSession.setup)}
               </button>
             )}
             <p className="best-score">
-              Best on {difficultyDetails[difficulty].label}: <strong>{scores[difficulty]}</strong>
+              Best 10-round score on {difficultyDetails[setup.difficulty].label}: <strong>{scores[setup.difficulty]}</strong>
+              {seen.size > 0 && (
+                <>
+                  {" · "}
+                  <button
+                    type="button"
+                    className="text-action"
+                    onClick={() => {
+                      clearSeen();
+                      setSeen(new Map());
+                    }}
+                  >
+                    Forget the {seen.size.toLocaleString("en")} figures I’ve met
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </section>
@@ -354,16 +542,17 @@ export function WaymarktraceGame() {
 
   if (!session || !figure) return frame(<main className="boot-screen">Choose a game from Play.</main>);
 
+  const setupLabel = `${difficultyDetails[session.setup.difficulty].label} · ${themeLabel(session.setup)}`;
+
   if (screen === "results") {
     const correct = session.results.filter((result) => result.resolution === "correct").length;
     return frame(
       <main className="results-screen">
         <section className="results-card">
-          <p className="kicker">Expedition complete</p>
+          <p className="kicker">{newBest ? "New best score" : "Expedition complete"}</p>
           <h1>{session.score} points</h1>
           <p className="results-lede">
-            You identified {correct} of {session.results.length} historical figures on{" "}
-            {difficultyDetails[session.difficulty].label}.
+            You identified {correct} of {session.results.length} historical figures · {setupLabel}.
           </p>
           <div className="results-stats">
             <div><strong>{getAccuracy(session)}%</strong><span>Accuracy</span></div>
@@ -372,7 +561,7 @@ export function WaymarktraceGame() {
           </div>
           <div className="journey-list">
             {session.results.map((result) => {
-              const item = figureById.get(result.figureId);
+              const item = data.byId.get(result.figureId);
               return item ? (
                 <div key={result.figureId}>
                   <span className={`result-mark result-mark--${result.resolution}`} />
@@ -383,15 +572,20 @@ export function WaymarktraceGame() {
             })}
           </div>
           <div className="results-actions">
-            <button className="primary-action" type="button" onClick={() => startGame(session.difficulty)}>Play again</button>
-            <button className="secondary-action" type="button" onClick={() => openScreen("home")}>Home</button>
+            <button className="primary-action" type="button" onClick={() => startGame(session.setup)}>Play again</button>
+            <button className="secondary-action" type="button" onClick={() => openScreen("home")}>Change setup</button>
           </div>
         </section>
       </main>,
     );
   }
 
-  const currentHints = [figure.hints.category, figure.hints.century, figure.hints.clue].slice(0, regularHints);
+  const currentHints = [
+    figure.hints.category,
+    `Associated with ${figure.region}`,
+    figure.hints.clue,
+  ].slice(0, regularHints);
+  const tier = difficultyDetails[figure.recognition];
 
   return frame(
     <main className="game-screen">
@@ -403,7 +597,9 @@ export function WaymarktraceGame() {
         <div className="game-stats">
           <span><small>Score</small><strong>{session.score}</strong></span>
           <span><small>Streak</small><strong>{session.streak}</strong></span>
-          <span className="difficulty-chip">{difficultyDetails[session.difficulty].label} · {difficultyDetails[session.difficulty].multiplier}×</span>
+          <span className="difficulty-chip" title={themeLabel(session.setup)}>
+            {tier.label} · {tier.multiplier}×
+          </span>
         </div>
       </header>
 
@@ -415,7 +611,7 @@ export function WaymarktraceGame() {
         <div className="map-column">
           <GameMap
             figure={figure}
-            difficulty={session.difficulty}
+            difficulty={session.setup.difficulty}
             resolved={Boolean(resolution)}
             hintsDisabled={regularHints >= 3}
             hiddenHintDisabled={hiddenHintUsed}
@@ -428,7 +624,7 @@ export function WaymarktraceGame() {
           {!resolution ? (
             <>
               <div className="question-heading">
-                <p>Birth and death places</p>
+                <p>{themeLabel(session.setup)}</p>
                 <h1>Who is this Historical Figure?</h1>
                 <span>Use the locations and dates on the map.</span>
               </div>
@@ -458,7 +654,7 @@ export function WaymarktraceGame() {
               {(hiddenHintUsed || currentHints.length > 0) && (
                 <div className="hints" aria-label="Revealed hints">
                   {hiddenHintUsed && <p><b>Hidden hint</b>{hiddenHintText(figure.name)}</p>}
-                  {currentHints.map((hint, index) => <p key={hint}><b>Hint {index + 1}</b>{hint}</p>)}
+                  {currentHints.map((hint, index) => <p key={index}><b>Hint {index + 1}</b>{hint}</p>)}
                 </div>
               )}
 
@@ -475,12 +671,22 @@ export function WaymarktraceGame() {
                 {resolution === "correct" ? "Identified" : resolution === "skipped" ? "Skipped" : "Revealed"}
               </p>
               <h1>{figure.name}</h1>
-              <p className="life-dates">{figure.birthYear < 0 ? `${Math.abs(figure.birthYear)} BCE` : figure.birthYear} – {figure.deathYear < 0 ? `${Math.abs(figure.deathYear)} BCE` : figure.deathYear}</p>
+              <p className="life-dates">{displayYear(figure.birthYear)} – {displayYear(figure.deathYear)}</p>
+              <p className="figure-tags">
+                <span>{fieldDetails[figure.field].label}</span>
+                <span>{eraDetails[figure.era].label}</span>
+                <span>{worldRegionDetails[figure.worldRegion].label}</span>
+              </p>
               <p className="biography">{figure.biography}</p>
               <dl className="place-details">
                 <div><dt>Born</dt><dd>{figure.birthLocation.name}</dd></div>
                 <div><dt>Died</dt><dd>{figure.deathLocation.name}</dd></div>
               </dl>
+              {figure.sources[0] && (
+                <a className="source-link" href={figure.sources[0]} target="_blank" rel="noreferrer">
+                  Read more
+                </a>
+              )}
               {feedback && <p className={`feedback feedback--${feedback.tone}`} role="status">{feedback.message}</p>}
               <button className="primary-action sheet-anchor" type="button" onClick={nextRound}>
                 {session.roundIndex === session.figureIds.length - 1 ? "See results" : "Next figure"}

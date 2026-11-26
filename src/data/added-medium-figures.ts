@@ -1,6 +1,7 @@
 import type { HistoricalFigure } from "@/types/game";
 
-type FigureRecord = Omit<HistoricalFigure, "recognition">;
+export type CuratedFigureRecord = Omit<HistoricalFigure, "recognition" | "era" | "field" | "worldRegion">;
+type FigureRecord = CuratedFigureRecord;
 
 const source = (slug: string) => [`https://en.wikipedia.org/wiki/${slug}`];
 
@@ -16,7 +17,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A naturalist whose account of evolution by natural selection reshaped the life sciences.",
     categories: ["Scientist"],
     region: "Britain",
-    hints: { category: "Naturalist", century: "Born in the 19th century", clue: "A voyage around South America preceded his theory of how species change." },
+    hints: { category: "Naturalist", clue: "A voyage around South America preceded his theory of how species change." },
     sources: source("Charles_Darwin"),
   },
   {
@@ -30,7 +31,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Spanish painter and sculptor who helped create Cubism and remained a central figure in modern art.",
     categories: ["Artist"],
     region: "Spain and France",
-    hints: { category: "Painter", century: "Born in the 19th century", clue: "He co-founded Cubism and kept working in the south of France." },
+    hints: { category: "Painter", clue: "He co-founded Cubism and kept working in the south of France." },
     sources: source("Pablo_Picasso"),
   },
   {
@@ -44,7 +45,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "King of England who broke with Rome and established the Church of England.",
     categories: ["Monarch"],
     region: "England",
-    hints: { category: "King", century: "Born in the 15th century", clue: "His search for a male heir led him through six marriages and a break with the pope." },
+    hints: { category: "King", clue: "His search for a male heir led him through six marriages and a break with the pope." },
     sources: source("Henry_VIII"),
   },
   {
@@ -58,7 +59,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "Queen of England whose marriage to Henry VIII helped bring about the break with papal authority.",
     categories: ["Monarch"],
     region: "England",
-    hints: { category: "Queen", century: "Born in the 16th century", clue: "She was crowned queen and later executed inside a royal fortress on the Thames." },
+    hints: { category: "Queen", clue: "She was crowned queen and later executed inside a royal fortress on the Thames." },
     sources: source("Anne_Boleyn"),
   },
   {
@@ -72,7 +73,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "Queen of Scotland whose claim to the English throne ended with her execution.",
     categories: ["Monarch"],
     region: "Scotland and England",
-    hints: { category: "Queen", century: "Born in the 16th century", clue: "A Scottish queen spent years in English custody before her execution." },
+    hints: { category: "Queen", clue: "A Scottish queen spent years in English custody before her execution." },
     sources: source("Mary,_Queen_of_Scots"),
   },
   {
@@ -86,7 +87,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "Duke of Normandy who became king of England after winning the Battle of Hastings.",
     categories: ["Monarch", "Military leader"],
     region: "Normandy and England",
-    hints: { category: "King and conqueror", century: "Born in the 11th century", clue: "His victory in 1066 replaced the ruling elite of England." },
+    hints: { category: "King and conqueror", clue: "His victory in 1066 replaced the ruling elite of England." },
     sources: source("William_the_Conqueror"),
   },
   {
@@ -100,7 +101,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "King of England remembered as a crusader who spent little of his reign in England.",
     categories: ["Monarch", "Military leader"],
     region: "England and France",
-    hints: { category: "King and crusader", century: "Born in the 12th century", clue: "He was wounded by a crossbow while besieging a castle in France." },
+    hints: { category: "King and crusader", clue: "He was wounded by a crossbow while besieging a castle in France." },
     sources: source("Richard_I_of_England"),
   },
   {
@@ -114,7 +115,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An English soldier and statesman who led Parliament’s armies and ruled as Lord Protector.",
     categories: ["Military leader", "Political leader"],
     region: "England",
-    hints: { category: "Soldier and head of state", century: "Born in the 16th century", clue: "He led the forces that defeated and then executed the king." },
+    hints: { category: "Soldier and head of state", clue: "He led the forces that defeated and then executed the king." },
     sources: source("Oliver_Cromwell"),
   },
   {
@@ -128,7 +129,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "The last king of France before the abolition of the monarchy during the French Revolution.",
     categories: ["Monarch"],
     region: "France",
-    hints: { category: "King", century: "Born in the 18th century", clue: "He was executed by guillotine in the capital during the Revolution." },
+    hints: { category: "King", clue: "He was executed by guillotine in the capital during the Revolution." },
     sources: source("Louis_XVI"),
   },
   {
@@ -142,7 +143,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Founding Father who became the first United States secretary of the treasury.",
     categories: ["Political leader"],
     region: "Caribbean and the United States",
-    hints: { category: "Statesman", century: "Born in the 18th century", clue: "He built the new republic’s financial system and died after a duel." },
+    hints: { category: "Statesman", clue: "He built the new republic’s financial system and died after a duel." },
     sources: source("Alexander_Hamilton"),
   },
   {
@@ -156,7 +157,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A U.S. Army officer who commanded the Confederate Army of Northern Virginia.",
     categories: ["Military leader"],
     region: "United States",
-    hints: { category: "General", century: "Born in the 19th century", clue: "He surrendered his army at Appomattox and later led a college in Virginia." },
+    hints: { category: "General", clue: "He surrendered his army at Appomattox and later led a college in Virginia." },
     sources: source("Robert_E._Lee"),
   },
   {
@@ -170,7 +171,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An abolitionist, writer, and orator who escaped slavery and argued for emancipation and equal rights.",
     categories: ["Activist", "Writer"],
     region: "United States",
-    hints: { category: "Abolitionist and writer", century: "Born in the 19th century", clue: "He escaped enslavement and became the most famous Black orator of his century." },
+    hints: { category: "Abolitionist and writer", clue: "He escaped enslavement and became the most famous Black orator of his century." },
     sources: source("Frederick_Douglass"),
   },
   {
@@ -184,7 +185,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An abolitionist and women’s-rights advocate who had been born into slavery in New York.",
     categories: ["Activist"],
     region: "United States",
-    hints: { category: "Abolitionist", century: "Born in the 18th century", clue: "She traveled speaking against slavery and for women’s rights after taking a new name." },
+    hints: { category: "Abolitionist", clue: "She traveled speaking against slavery and for women’s rights after taking a new name." },
     sources: source("Sojourner_Truth"),
   },
   {
@@ -198,7 +199,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A leading organizer of the campaign for women’s suffrage in the United States.",
     categories: ["Activist"],
     region: "United States",
-    hints: { category: "Suffragist", century: "Born in the 19th century", clue: "She was arrested for voting and spent decades campaigning for the ballot." },
+    hints: { category: "Suffragist", clue: "She was arrested for voting and spent decades campaigning for the ballot." },
     sources: source("Susan_B._Anthony"),
   },
   {
@@ -212,7 +213,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A principal author of the Declaration of Sentiments and an organizer of the Seneca Falls Convention.",
     categories: ["Activist"],
     region: "United States",
-    hints: { category: "Suffragist", century: "Born in the 19th century", clue: "She helped launch the American women’s-rights movement at Seneca Falls." },
+    hints: { category: "Suffragist", clue: "She helped launch the American women’s-rights movement at Seneca Falls." },
     sources: source("Elizabeth_Cady_Stanton"),
   },
   {
@@ -226,7 +227,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A British political activist who led the militant campaign for women’s suffrage.",
     categories: ["Activist"],
     region: "Britain",
-    hints: { category: "Suffragist", century: "Born in the 19th century", clue: "She founded a women’s social and political union in Britain." },
+    hints: { category: "Suffragist", clue: "She founded a women’s social and political union in Britain." },
     sources: source("Emmeline_Pankhurst"),
   },
   {
@@ -240,7 +241,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Hunkpapa Lakota leader who resisted U.S. expansion onto the northern Plains.",
     categories: ["Political leader", "Military leader"],
     region: "North American Plains",
-    hints: { category: "Lakota leader", century: "Born in the 19th century", clue: "He was a leader of the Lakota resistance before the reservation era." },
+    hints: { category: "Lakota leader", clue: "He was a leader of the Lakota resistance before the reservation era." },
     sources: source("Sitting_Bull"),
   },
   {
@@ -254,7 +255,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Chiricahua Apache leader who fought Mexican and U.S. forces to remain on ancestral land.",
     categories: ["Military leader"],
     region: "Southwest North America",
-    hints: { category: "Apache leader", century: "Born in the 19th century", clue: "He led the last major Apache armed resistance in the Southwest." },
+    hints: { category: "Apache leader", clue: "He led the last major Apache armed resistance in the Southwest." },
     sources: source("Geronimo"),
   },
   {
@@ -268,7 +269,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An Oglala Lakota war leader remembered for resistance to U.S. military campaigns on the Plains.",
     categories: ["Military leader"],
     region: "North American Plains",
-    hints: { category: "Lakota war leader", century: "Born in the 19th century", clue: "He was killed at a frontier fort after years of fighting to defend the Black Hills." },
+    hints: { category: "Lakota war leader", clue: "He was killed at a frontier fort after years of fighting to defend the Black Hills." },
     sources: source("Crazy_Horse"),
   },
   {
@@ -282,7 +283,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Powhatan woman who became an intermediary between her people and the English colony at Jamestown.",
     categories: ["Diplomat"],
     region: "Virginia and England",
-    hints: { category: "Powhatan diplomat", century: "Born in the 16th century", clue: "She traveled to England and died there before she could sail home." },
+    hints: { category: "Powhatan diplomat", clue: "She traveled to England and died there before she could sail home." },
     sources: source("Pocahontas"),
   },
   {
@@ -296,7 +297,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A nurse who founded the American Red Cross after organizing relief in the Civil War.",
     categories: ["Humanitarian"],
     region: "United States",
-    hints: { category: "Nurse and organizer", century: "Born in the 19th century", clue: "She founded the American branch of a worldwide relief society." },
+    hints: { category: "Nurse and organizer", clue: "She founded the American branch of a worldwide relief society." },
     sources: source("Clara_Barton"),
   },
   {
@@ -310,7 +311,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A physiologist whose experiments on conditioned reflexes shaped modern psychology.",
     categories: ["Scientist"],
     region: "Russia",
-    hints: { category: "Physiologist", century: "Born in the 19th century", clue: "His experiments with dogs became the classic example of a conditioned reflex." },
+    hints: { category: "Physiologist", clue: "His experiments with dogs became the classic example of a conditioned reflex." },
     sources: source("Ivan_Pavlov"),
   },
   {
@@ -324,7 +325,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Byzantine emperor who reconquered western territories and ordered the codification of Roman law.",
     categories: ["Monarch"],
     region: "Byzantine Empire",
-    hints: { category: "Emperor", century: "Born in the 5th century", clue: "His law code preserved Roman legal tradition for later Europe." },
+    hints: { category: "Emperor", clue: "His law code preserved Roman legal tradition for later Europe." },
     sources: source("Justinian_I"),
   },
   {
@@ -338,7 +339,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "Duchess of Aquitaine and queen of both France and England, and a patron of court culture.",
     categories: ["Monarch"],
     region: "France and England",
-    hints: { category: "Queen and duchess", century: "Born in the 12th century", clue: "She was queen to two kings and mother of two English kings." },
+    hints: { category: "Queen and duchess", clue: "She was queen to two kings and mother of two English kings." },
     sources: source("Eleanor_of_Aquitaine"),
   },
   {
@@ -352,7 +353,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An English sea captain who circumnavigated the globe and raided Spanish ports and ships.",
     categories: ["Explorer", "Military leader"],
     region: "Atlantic world",
-    hints: { category: "Sea captain", century: "Born in the 16th century", clue: "He sailed around the world and died of illness off the Caribbean coast." },
+    hints: { category: "Sea captain", clue: "He sailed around the world and died of illness off the Caribbean coast." },
     sources: source("Francis_Drake"),
   },
   {
@@ -366,7 +367,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An English courtier, writer, and explorer who sponsored colonies on the North American coast.",
     categories: ["Explorer", "Writer"],
     region: "England and the Atlantic",
-    hints: { category: "Courtier and explorer", century: "Born in the 16th century", clue: "He sponsored the Roanoke ventures and was later executed in London." },
+    hints: { category: "Courtier and explorer", clue: "He sponsored the Roanoke ventures and was later executed in London." },
     sources: source("Walter_Raleigh"),
   },
   {
@@ -380,7 +381,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A British admiral whose victory at Trafalgar secured naval dominance during the Napoleonic Wars.",
     categories: ["Military leader"],
     region: "Britain and the Atlantic",
-    hints: { category: "Admiral", century: "Born in the 18th century", clue: "He was killed by a sharpshooter during his greatest naval victory." },
+    hints: { category: "Admiral", clue: "He was killed by a sharpshooter during his greatest naval victory." },
     sources: source("Horatio_Nelson"),
   },
   {
@@ -394,7 +395,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A British soldier and prime minister who commanded the allied army that defeated Napoleon at Waterloo.",
     categories: ["Military leader", "Political leader"],
     region: "Ireland, Britain, and Europe",
-    hints: { category: "General and prime minister", century: "Born in the 18th century", clue: "He commanded the army that ended Napoleon’s return at Waterloo." },
+    hints: { category: "General and prime minister", clue: "He commanded the army that ended Napoleon’s return at Waterloo." },
     sources: source("Arthur_Wellesley,_1st_Duke_of_Wellington"),
   },
   {
@@ -408,7 +409,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "Empress of the French as the first wife of Napoleon Bonaparte.",
     categories: ["Monarch"],
     region: "Caribbean and France",
-    hints: { category: "Empress", century: "Born in the 18th century", clue: "She was crowned empress beside Napoleon and later lived at Malmaison." },
+    hints: { category: "Empress", clue: "She was crowned empress beside Napoleon and later lived at Malmaison." },
     sources: source("Jos%C3%A9phine_de_Beauharnais"),
   },
   {
@@ -422,7 +423,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A U.S. general who commanded in the Pacific during the Second World War and later in Korea.",
     categories: ["Military leader"],
     region: "United States and the Pacific",
-    hints: { category: "General", century: "Born in the 19th century", clue: "He commanded Allied forces in the Southwest Pacific and the occupation of Japan." },
+    hints: { category: "General", clue: "He commanded Allied forces in the Southwest Pacific and the occupation of Japan." },
     sources: source("Douglas_MacArthur"),
   },
   {
@@ -436,7 +437,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A U.S. Army general who led armored forces in North Africa and Europe during the Second World War.",
     categories: ["Military leader"],
     region: "United States and Europe",
-    hints: { category: "General", century: "Born in the 19th century", clue: "He led a fast armored advance across France and died after a car crash in Germany." },
+    hints: { category: "General", clue: "He led a fast armored advance across France and died after a car crash in Germany." },
     sources: source("George_S._Patton"),
   },
   {
@@ -450,7 +451,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A German industrialist who protected more than a thousand Jewish workers during the Holocaust.",
     categories: ["Humanitarian"],
     region: "Central Europe",
-    hints: { category: "Industrialist", century: "Born in the 20th century", clue: "He used his factories to shield Jewish workers from deportation." },
+    hints: { category: "Industrialist", clue: "He used his factories to shield Jewish workers from deportation." },
     sources: source("Oskar_Schindler"),
   },
   {
@@ -464,7 +465,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An Argentine political leader and actress who became a powerful first lady and advocate for workers.",
     categories: ["Political leader"],
     region: "Argentina",
-    hints: { category: "Political leader", century: "Born in the 20th century", clue: "She rose from acting to become the most famous first lady in Argentina." },
+    hints: { category: "Political leader", clue: "She rose from acting to become the most famous first lady in Argentina." },
     sources: source("Eva_Per%C3%B3n"),
   },
   {
@@ -478,7 +479,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A leader of the Mexican Revolution who fought for the return of village lands in Morelos.",
     categories: ["Military leader", "Political leader"],
     region: "Mexico",
-    hints: { category: "Revolutionary", century: "Born in the 19th century", clue: "His movement’s slogan demanded land and liberty for rural villages." },
+    hints: { category: "Revolutionary", clue: "His movement’s slogan demanded land and liberty for rural villages." },
     sources: source("Emiliano_Zapata"),
   },
   {
@@ -492,7 +493,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A commander in the Mexican Revolution who led the División del Norte.",
     categories: ["Military leader"],
     region: "Mexico",
-    hints: { category: "Revolutionary general", century: "Born in the 19th century", clue: "He led a northern revolutionary army and was assassinated in Chihuahua." },
+    hints: { category: "Revolutionary general", clue: "He led a northern revolutionary army and was assassinated in Chihuahua." },
     sources: source("Pancho_Villa"),
   },
   {
@@ -506,7 +507,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A Zapotec lawyer who became president of Mexico and defended the republic against foreign intervention.",
     categories: ["Political leader"],
     region: "Mexico",
-    hints: { category: "President", century: "Born in the 19th century", clue: "He led Mexico through the French intervention and died in office in the capital." },
+    hints: { category: "President", clue: "He led Mexico through the French intervention and died in office in the capital." },
     sources: source("Benito_Ju%C3%A1rez"),
   },
   {
@@ -520,7 +521,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A general whose campaigns helped secure independence for Argentina, Chile, and Peru.",
     categories: ["Military leader"],
     region: "South America and France",
-    hints: { category: "Independence general", century: "Born in the 18th century", clue: "He crossed the Andes with an army and later died in a French port." },
+    hints: { category: "Independence general", clue: "He crossed the Andes with an army and later died in a French port." },
     sources: source("Jos%C3%A9_de_San_Mart%C3%ADn"),
   },
   {
@@ -534,7 +535,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A priest whose call to revolt in 1810 began Mexico’s war of independence.",
     categories: ["Political leader", "Religious leader"],
     region: "Mexico",
-    hints: { category: "Priest and rebel leader", century: "Born in the 18th century", clue: "His cry from a parish church opened Mexico’s independence war." },
+    hints: { category: "Priest and rebel leader", clue: "His cry from a parish church opened Mexico’s independence war." },
     sources: source("Miguel_Hidalgo_y_Costilla"),
   },
   {
@@ -548,7 +549,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A fashion designer who built a house known for simple lines, jersey cloth, and a famous perfume.",
     categories: ["Designer"],
     region: "France",
-    hints: { category: "Fashion designer", century: "Born in the 19th century", clue: "She made a modernist wardrobe and a numbered perfume into global brands." },
+    hints: { category: "Fashion designer", clue: "She made a modernist wardrobe and a numbered perfume into global brands." },
     sources: source("Coco_Chanel"),
   },
   {
@@ -562,7 +563,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An entrepreneur who built a hair-care company and became one of the wealthiest self-made businesswomen in the United States.",
     categories: ["Entrepreneur"],
     region: "United States",
-    hints: { category: "Entrepreneur", century: "Born in the 19th century", clue: "She built a national beauty company and a mansion on the Hudson." },
+    hints: { category: "Entrepreneur", clue: "She built a national beauty company and a mansion on the Hudson." },
     sources: source("Madam_C._J._Walker"),
   },
   {
@@ -576,7 +577,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An industrialist who founded Standard Oil and later gave away much of his fortune.",
     categories: ["Entrepreneur"],
     region: "United States",
-    hints: { category: "Industrialist", century: "Born in the 19th century", clue: "His oil company dominated the industry before it was broken up." },
+    hints: { category: "Industrialist", clue: "His oil company dominated the industry before it was broken up." },
     sources: source("John_D._Rockefeller"),
   },
   {
@@ -590,7 +591,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A steel magnate and philanthropist who funded thousands of public libraries.",
     categories: ["Entrepreneur"],
     region: "Scotland and the United States",
-    hints: { category: "Industrialist", century: "Born in the 19th century", clue: "He made a fortune in steel and then paid for public libraries." },
+    hints: { category: "Industrialist", clue: "He made a fortune in steel and then paid for public libraries." },
     sources: source("Andrew_Carnegie"),
   },
   {
@@ -604,7 +605,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A financier who organized major industrial combinations and stabilized American markets in panics.",
     categories: ["Financier"],
     region: "United States and Europe",
-    hints: { category: "Banker", century: "Born in the 19th century", clue: "He dominated American finance and died while traveling in Italy." },
+    hints: { category: "Banker", clue: "He dominated American finance and died while traveling in Italy." },
     sources: source("J._P._Morgan"),
   },
   {
@@ -618,7 +619,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An aviation pioneer who, with his brother, made the first controlled powered airplane flight.",
     categories: ["Inventor"],
     region: "United States",
-    hints: { category: "Aviator and inventor", century: "Born in the 19th century", clue: "He piloted the first sustained powered flight at Kitty Hawk." },
+    hints: { category: "Aviator and inventor", clue: "He piloted the first sustained powered flight at Kitty Hawk." },
     sources: source("Orville_Wright"),
   },
   {
@@ -632,7 +633,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An aviation pioneer who designed and tested the aircraft used for the first powered flights.",
     categories: ["Inventor"],
     region: "United States",
-    hints: { category: "Aviator and inventor", century: "Born in the 19th century", clue: "With his younger brother he solved controlled powered flight." },
+    hints: { category: "Aviator and inventor", clue: "With his younger brother he solved controlled powered flight." },
     sources: source("Wilbur_Wright"),
   },
   {
@@ -646,7 +647,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "An aviator who made the first solo nonstop flight across the Atlantic.",
     categories: ["Aviator"],
     region: "United States",
-    hints: { category: "Aviator", century: "Born in the 20th century", clue: "He flew alone from New York to Paris in 1927." },
+    hints: { category: "Aviator", clue: "He flew alone from New York to Paris in 1927." },
     sources: source("Charles_Lindbergh"),
   },
   {
@@ -660,7 +661,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A physicist and astronaut who became the first American woman in space.",
     categories: ["Scientist", "Astronaut"],
     region: "United States",
-    hints: { category: "Astronaut", century: "Born in the 20th century", clue: "She flew on the space shuttle Challenger in 1983." },
+    hints: { category: "Astronaut", clue: "She flew on the space shuttle Challenger in 1983." },
     sources: source("Sally_Ride"),
   },
   {
@@ -674,7 +675,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A martial artist and actor who brought Hong Kong action cinema to a global audience.",
     categories: ["Actor", "Athlete"],
     region: "United States and Hong Kong",
-    hints: { category: "Martial artist and actor", century: "Born in the 20th century", clue: "He was born in California, raised in Hong Kong, and died there at 32." },
+    hints: { category: "Martial artist and actor", clue: "He was born in California, raised in Hong Kong, and died there at 32." },
     sources: source("Bruce_Lee"),
   },
   {
@@ -688,7 +689,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "A singer whose recordings made her a defining voice of soul music.",
     categories: ["Musician"],
     region: "United States",
-    hints: { category: "Singer", century: "Born in the 20th century", clue: "She was called the Queen of Soul and recorded in the city where she died." },
+    hints: { category: "Singer", clue: "She was called the Queen of Soul and recorded in the city where she died." },
     sources: source("Aretha_Franklin"),
   },
   {
@@ -702,7 +703,7 @@ export const addedMediumFigures: FigureRecord[] = [
     biography: "The inventor of the tactile writing system still used by blind readers.",
     categories: ["Inventor"],
     region: "France",
-    hints: { category: "Inventor", century: "Born in the 19th century", clue: "Blinded as a child, he devised a dot alphabet at a Paris school." },
+    hints: { category: "Inventor", clue: "Blinded as a child, he devised a dot alphabet at a Paris school." },
     sources: source("Louis_Braille"),
   },
 ];
