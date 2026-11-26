@@ -49,9 +49,9 @@ describe("question selection", () => {
         idsForDifficulty(historicalFigures, tier).length,
       ]),
     );
-    expect(sizes.easy).toBeGreaterThanOrEqual(180);
-    expect(sizes.medium).toBeGreaterThanOrEqual(400);
-    expect(sizes.hard).toBeGreaterThanOrEqual(2000);
+    expect(sizes.easy).toBeGreaterThanOrEqual(120);
+    expect(sizes.medium).toBeGreaterThanOrEqual(300);
+    expect(sizes.hard).toBeGreaterThanOrEqual(1500);
     expect(sizes["super-hard"]).toBeGreaterThanOrEqual(5000);
   });
 

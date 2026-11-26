@@ -251,5 +251,101 @@ for (const binding of payload.results.bindings) {
   });
 }
 
+// Wikidata often records a building rather than a town: "Birthplace of Ronald Reagan",
+// "Weill Cornell Medical Center", "668 St. Cloud Road". Those give the answer away or mean
+// nothing on a map, so name the town they are in instead. The marker keeps its coordinates.
+const placesEndpoint = "https://query.wikidata.org/sparql";
+
+async function placeDetails(entityIds) {
+  const query = `
+SELECT ?person ?place ?placeLabel ?isTown ?isArea ?parentLabel WHERE {
+  VALUES ?person { ${entityIds.map((id) => `wd:${id}`).join(" ")} }
+  { ?person wdt:P19 ?place } UNION { ?person wdt:P20 ?place }
+  BIND(EXISTS { ?place wdt:P31/wdt:P279* wd:Q486972 } AS ?isTown)
+  BIND(EXISTS { ?place wdt:P31/wdt:P279* wd:Q56061 } AS ?isArea)
+  OPTIONAL { ?place wdt:P131 ?parent }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}`;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const response = await fetch(`${placesEndpoint}?query=${encodeURIComponent(query)}`, {
+      headers: {
+        Accept: "application/sparql-results+json",
+        "User-Agent": "Waymarktrace/1.0 (static educational dataset)",
+      },
+    });
+    if (response.ok) return (await response.json()).results.bindings;
+    await new Promise((resolve) => setTimeout(resolve, 5000 * (attempt + 1)));
+  }
+  throw new Error("Wikidata place lookup failed");
+}
+
+// Only the person's own name counts: "Vasili III of Moscow" may be born in Moscow.
+function surnameIn(label, name) {
+  const ownName = name.split(/\s+of\s+|,/i)[0];
+  const words = ownName.split(/\s+/).filter((word) => word.length >= 4);
+  return words.some((word) => label.toLowerCase().includes(word.toLowerCase()));
+}
+
+const placesCache = process.argv[3];
+let placeRows;
+if (placesCache) {
+  try {
+    placeRows = JSON.parse(await readFile(placesCache, "utf8"));
+  } catch {
+    placeRows = undefined;
+  }
+}
+if (!placeRows) {
+  placeRows = [];
+  // Small batches, three at a time: the query service times out on big ones.
+  const ids = figures.map((figure) => figure.q);
+  const batches = [];
+  for (let start = 0; start < ids.length; start += 100) batches.push(ids.slice(start, start + 100));
+  let done = 0;
+  const worker = async () => {
+    while (batches.length) {
+      const batch = batches.shift();
+      placeRows.push(...(await placeDetails(batch)));
+      done += batch.length;
+      process.stdout.write(`\rLooked up places for ${done}/${ids.length} people`);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  process.stdout.write("\n");
+  if (placesCache) await writeFile(placesCache, JSON.stringify(placeRows));
+}
+
+const placesByPerson = new Map();
+for (const row of placeRows) {
+  const id = value(row, "person").split("/").at(-1);
+  const list = placesByPerson.get(id) ?? [];
+  list.push({
+    label: value(row, "placeLabel"),
+    isTown: value(row, "isTown") === "true",
+    isArea: value(row, "isArea") === "true",
+    parent: value(row, "parentLabel"),
+  });
+  placesByPerson.set(id, list);
+}
+
+// Buildings, estates and addresses. Unclassified real places (ancient cities, islands) stay.
+const looksLikeBuilding =
+  /\b(hospital|clinic|medical|sanatorium|infirmary|palace|palais|palazzo|château|chateau|castle|schloss|house|home|hall|manor|villa|estate|ranch|farm|plantation|monument|birthplace|road|street|rue|avenue|boulevard|square|lane|hotel|apartment|building|tower|church|cathedral|abbey|monastery|convent|prison|camp|hill|gardens?|park|cemetery|school|college|university|institute|station|airport|residence|center|centre|theatre|theater|ranch|lodge|cottage|mansion|court|quarter)\b|^\d/i;
+
+let renamedPlaces = 0;
+for (const figure of figures) {
+  for (const key of ["bp", "dp"]) {
+    const label = figure[key][0];
+    const info = (placesByPerson.get(figure.q) ?? []).find((place) => place.label === label);
+    if (!info?.parent || /^Q\d+$/.test(info.parent)) continue;
+    const namesThePerson = surnameIn(label, figure.n);
+    if (namesThePerson || (!info.isTown && !info.isArea && looksLikeBuilding.test(label))) {
+      figure[key][0] = info.parent;
+      renamedPlaces += 1;
+    }
+  }
+}
+console.log(`Renamed ${renamedPlaces} building or address places to their town.`);
+
 await writeFile(join(root, "src", "data", "generated-figures.json"), `${JSON.stringify(figures)}\n`);
 console.log(`Wrote ${figures.length} figures (${skipped} skipped).`);
