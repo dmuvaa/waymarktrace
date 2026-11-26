@@ -1,10 +1,17 @@
-import type { Difficulty, GameSession, RoundState } from "@/types/game";
+import { defaultSetup, ROUND_OPTIONS } from "@/lib/game/engine";
+import { eraDetails, fieldDetails, worldRegionDetails } from "@/lib/game/classify";
+import type { Difficulty, GameSession, GameSetup, RoundState } from "@/types/game";
 
-const SESSION_KEY = "waymarktrace:session:v1";
-const PREFERENCES_KEY = "waymarktrace:preferences:v1";
+const SESSION_KEY = "waymarktrace:session:v2";
+const SETUP_KEY = "waymarktrace:setup:v2";
+const LEGACY_PREFERENCES_KEY = "waymarktrace:preferences:v1";
 const SCORES_KEY = "waymarktrace:scores:v1";
+const SEEN_KEY = "waymarktrace:seen:v1";
+const SEEN_LIMIT = 3000;
 
 type BestScores = Record<Difficulty, number>;
+
+const difficulties: Difficulty[] = ["easy", "medium", "hard", "super-hard"];
 
 function validRoundState(session: GameSession, state: RoundState | undefined) {
   return (
@@ -35,6 +42,17 @@ function storageAvailable() {
   }
 }
 
+export function validSetup(value: unknown): GameSetup | null {
+  if (!value || typeof value !== "object") return null;
+  const setup = value as Partial<GameSetup>;
+  const okDifficulty = difficulties.includes(setup.difficulty as Difficulty);
+  const okEra = setup.era === "any" || (!!setup.era && setup.era in eraDetails);
+  const okField = setup.field === "any" || (!!setup.field && setup.field in fieldDetails);
+  const okRegion = setup.region === "any" || (!!setup.region && setup.region in worldRegionDetails);
+  const okRounds = (ROUND_OPTIONS as readonly number[]).includes(setup.rounds as number);
+  return okDifficulty && okEra && okField && okRegion && okRounds ? (setup as GameSetup) : null;
+}
+
 export function saveSession(session: GameSession | null) {
   if (!storageAvailable()) return false;
   if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -48,8 +66,8 @@ export function loadSession(validFigureIds: Set<string>): GameSession | null {
     const session = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as GameSession | null;
     if (
       !session ||
-      session.version !== 1 ||
-      !["easy", "medium", "hard", "super-hard"].includes(session.difficulty) ||
+      session.version !== 2 ||
+      !validSetup(session.setup) ||
       !Array.isArray(session.figureIds) ||
       session.figureIds.length === 0 ||
       !session.figureIds.every((id) => validFigureIds.has(id)) ||
@@ -66,14 +84,22 @@ export function loadSession(validFigureIds: Set<string>): GameSession | null {
   }
 }
 
-export function savePreferredDifficulty(difficulty: Difficulty) {
-  if (storageAvailable()) localStorage.setItem(PREFERENCES_KEY, difficulty);
+export function saveSetup(setup: GameSetup) {
+  if (storageAvailable()) localStorage.setItem(SETUP_KEY, JSON.stringify(setup));
 }
 
-export function loadPreferredDifficulty(): Difficulty {
-  if (!storageAvailable()) return "medium";
-  const value = localStorage.getItem(PREFERENCES_KEY);
-  return value === "easy" || value === "hard" || value === "super-hard" ? value : "medium";
+export function loadSetup(): GameSetup {
+  if (!storageAvailable()) return defaultSetup;
+  try {
+    const saved = validSetup(JSON.parse(localStorage.getItem(SETUP_KEY) ?? "null"));
+    if (saved) return saved;
+  } catch {
+    // fall through to the legacy preference
+  }
+  const legacy = localStorage.getItem(LEGACY_PREFERENCES_KEY);
+  return difficulties.includes(legacy as Difficulty)
+    ? { ...defaultSetup, difficulty: legacy as Difficulty }
+    : defaultSetup;
 }
 
 export function getBestScores(): BestScores {
@@ -87,8 +113,34 @@ export function getBestScores(): BestScores {
 }
 
 export function recordBestScore(difficulty: Difficulty, score: number) {
-  if (!storageAvailable()) return;
+  if (!storageAvailable()) return false;
   const scores = getBestScores();
+  const isNewBest = score > scores[difficulty];
   scores[difficulty] = Math.max(scores[difficulty], score);
   localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+  return isNewBest;
+}
+
+/** Figures the player has already met, with when, so new games favour fresh faces. */
+export function loadSeen(): Map<string, number> {
+  if (!storageAvailable()) return new Map();
+  try {
+    const entries = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]") as [string, number][];
+    return new Map(Array.isArray(entries) ? entries : []);
+  } catch {
+    return new Map();
+  }
+}
+
+export function markSeen(figureId: string) {
+  if (!storageAvailable()) return;
+  const seen = loadSeen();
+  seen.delete(figureId);
+  seen.set(figureId, Date.now());
+  const entries = [...seen.entries()].slice(-SEEN_LIMIT);
+  localStorage.setItem(SEEN_KEY, JSON.stringify(entries));
+}
+
+export function clearSeen() {
+  if (storageAvailable()) localStorage.removeItem(SEEN_KEY);
 }

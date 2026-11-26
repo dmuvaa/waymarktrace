@@ -1,10 +1,29 @@
 import { normalizeName } from "@/lib/game/answer-matching";
-import { recognitionFor } from "@/lib/game/recognition";
+import { MEDIUM_SITELINKS, recognitionFor } from "@/lib/game/recognition";
+import { eraFor, fieldFor, worldRegionDetails, worldRegionFor } from "@/lib/game/classify";
 import type { HistoricalFigure } from "@/types/game";
-import { addedMediumFigures } from "./added-medium-figures";
+import { addedMediumFigures, type CuratedFigureRecord } from "./added-medium-figures";
 import generatedFigures from "./generated-figures.json";
 
-type FigureRecord = Omit<HistoricalFigure, "recognition">;
+type FigureRecord = CuratedFigureRecord;
+
+/** Compact record written by scripts/generate-figures.mjs, ordered by fame (sitelinks). */
+type GeneratedRecord = {
+  id: string;
+  q: string;
+  n: string;
+  a: string[];
+  b: number;
+  d: number;
+  bp: [string, number, number];
+  dp: [string, number, number];
+  s: string;
+  o: string[];
+  c: string;
+  i: string;
+  /** Wikipedia language editions with an article on this person: the fame measure. */
+  l: number;
+};
 
 const source = (slug: string) => [`https://en.wikipedia.org/wiki/${slug}`];
 
@@ -20,7 +39,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A French military commander and emperor whose campaigns reshaped Europe and whose legal reforms had a lasting global influence.",
     categories: ["Military leader", "Political leader"],
     region: "France and Europe",
-    hints: { category: "Military and political leader", century: "Born in the 18th century", clue: "He rose to power after the French Revolution and later became emperor." },
+    hints: { category: "Military and political leader", clue: "He rose to power after the French Revolution and later became emperor." },
     sources: source("Napoleon"),
   },
   {
@@ -34,7 +53,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "The final active ruler of Ptolemaic Egypt, renowned for her political alliances with Julius Caesar and Mark Antony.",
     categories: ["Monarch", "Political leader"],
     region: "North Africa",
-    hints: { category: "Monarch", century: "Born in the 1st century BCE", clue: "She was the last active ruler of a Greek-speaking dynasty in Egypt." },
+    hints: { category: "Monarch", clue: "She was the last active ruler of a Greek-speaking dynasty in Egypt." },
     sources: source("Cleopatra"),
   },
   {
@@ -48,7 +67,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A physicist and chemist who pioneered research on radioactivity and became the first person to win Nobel Prizes in two sciences.",
     categories: ["Scientist"],
     region: "Poland and France",
-    hints: { category: "Scientist", century: "Born in the 19th century", clue: "Her research led to the discovery of polonium and radium." },
+    hints: { category: "Scientist", clue: "Her research led to the discovery of polonium and radium." },
     sources: source("Marie_Curie"),
   },
   {
@@ -62,7 +81,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An anti-apartheid leader who spent 27 years in prison before becoming South Africa’s first Black president.",
     categories: ["Political leader", "Activist"],
     region: "Southern Africa",
-    hints: { category: "Political leader and activist", century: "Born in the 20th century", clue: "After 27 years in prison, he led his country through a democratic transition." },
+    hints: { category: "Political leader and activist", clue: "After 27 years in prison, he led his country through a democratic transition." },
     sources: source("Nelson_Mandela"),
   },
   {
@@ -76,7 +95,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "Founder and first Great Khan of the Mongol Empire, which became the largest contiguous land empire in history.",
     categories: ["Military leader", "Monarch"],
     region: "Central and East Asia",
-    hints: { category: "Conqueror and ruler", century: "Born in the 12th century", clue: "He united the tribes of the Mongolian plateau under one empire." },
+    hints: { category: "Conqueror and ruler", clue: "He united the tribes of the Mongolian plateau under one empire." },
     sources: source("Genghis_Khan"),
   },
   {
@@ -90,7 +109,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Mexican painter known for vivid self-portraits that explored identity, pain, nature, and Mexican culture.",
     categories: ["Artist"],
     region: "Mexico",
-    hints: { category: "Artist", century: "Born in the 20th century", clue: "Her highly personal self-portraits often included symbols from Mexican folk culture." },
+    hints: { category: "Artist", clue: "Her highly personal self-portraits often included symbols from Mexican folk culture." },
     sources: source("Frida_Kahlo"),
   },
   {
@@ -104,7 +123,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Moroccan scholar and explorer whose decades of travel across Africa and Eurasia were recorded in the Rihla.",
     categories: ["Explorer", "Writer"],
     region: "North Africa",
-    hints: { category: "Explorer and scholar", century: "Born in the 14th century", clue: "His journeys covered more distance than those of Marco Polo." },
+    hints: { category: "Explorer and scholar", clue: "His journeys covered more distance than those of Marco Polo." },
     sources: source("Ibn_Battuta"),
   },
   {
@@ -118,7 +137,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An English mathematician whose notes on Charles Babbage’s Analytical Engine included an early published computer algorithm.",
     categories: ["Mathematician", "Writer"],
     region: "United Kingdom",
-    hints: { category: "Mathematician", century: "Born in the 19th century", clue: "She described how a proposed mechanical computer could process more than numbers." },
+    hints: { category: "Mathematician", clue: "She described how a proposed mechanical computer could process more than numbers." },
     sources: source("Ada_Lovelace"),
   },
   {
@@ -132,7 +151,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A leader of India’s independence movement who advanced nonviolent resistance as a means of political and social change.",
     categories: ["Activist", "Political leader"],
     region: "South Asia",
-    hints: { category: "Independence leader", century: "Born in the 19th century", clue: "He made nonviolent civil disobedience central to a campaign against colonial rule." },
+    hints: { category: "Independence leader", clue: "He made nonviolent civil disobedience central to a campaign against colonial rule." },
     sources: source("Mahatma_Gandhi"),
   },
   {
@@ -146,7 +165,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Venezuelan military and political leader who helped secure the independence of several South American nations.",
     categories: ["Military leader", "Revolutionary"],
     region: "South America",
-    hints: { category: "Revolutionary leader", century: "Born in the 18th century", clue: "Known as El Libertador, he led independence campaigns across northern South America." },
+    hints: { category: "Revolutionary leader", clue: "Known as El Libertador, he led independence campaigns across northern South America." },
     sources: source("Simón_Bolívar"),
   },
   {
@@ -160,7 +179,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Chinese philosopher and teacher whose ethical and political ideas profoundly shaped East Asian thought.",
     categories: ["Philosopher", "Teacher"],
     region: "East Asia",
-    hints: { category: "Philosopher and teacher", century: "Born in the 6th century BCE", clue: "His teachings emphasized moral cultivation, family duty, and just government." },
+    hints: { category: "Philosopher and teacher", clue: "His teachings emphasized moral cultivation, family duty, and just government." },
     sources: source("Confucius"),
   },
   {
@@ -174,7 +193,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A British nurse and statistician whose work during the Crimean War helped establish modern professional nursing.",
     categories: ["Medical reformer", "Statistician"],
     region: "Europe",
-    hints: { category: "Medical reformer", century: "Born in the 19th century", clue: "Her public-health diagrams and hospital reforms transformed nursing." },
+    hints: { category: "Medical reformer", clue: "Her public-health diagrams and hospital reforms transformed nursing." },
     sources: source("Florence_Nightingale"),
   },
   {
@@ -188,7 +207,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An Italian Renaissance artist and polymath whose work joined close observation, engineering, anatomy, and painting.",
     categories: ["Artist", "Inventor"],
     region: "Europe",
-    hints: { category: "Artist and polymath", century: "Born in the 15th century", clue: "His notebooks explored anatomy and flight; his paintings include the Mona Lisa." },
+    hints: { category: "Artist and polymath", clue: "His notebooks explored anatomy and flight; his paintings include the Mona Lisa." },
     sources: source("Leonardo_da_Vinci"),
   },
   {
@@ -202,7 +221,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Japanese court lady and author of The Tale of Genji, often described as one of the world’s earliest novels.",
     categories: ["Writer"],
     region: "East Asia",
-    hints: { category: "Writer", century: "Born in the 10th century", clue: "She wrote an expansive account of court life in Heian-period Japan." },
+    hints: { category: "Writer", clue: "She wrote an expansive account of court life in Heian-period Japan." },
     sources: source("Murasaki_Shikibu"),
   },
   {
@@ -216,7 +235,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An American abolitionist who escaped slavery and repeatedly returned south to guide others to freedom.",
     categories: ["Abolitionist", "Activist"],
     region: "North America",
-    hints: { category: "Abolitionist", century: "Born in the 19th century", clue: "She became a leading conductor on the Underground Railroad." },
+    hints: { category: "Abolitionist", clue: "She became a leading conductor on the Underground Railroad." },
     sources: source("Harriet_Tubman"),
   },
   {
@@ -230,7 +249,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Persian polymath whose Canon of Medicine and philosophical works influenced learning across the Islamic world and Europe.",
     categories: ["Physician", "Philosopher"],
     region: "Central and West Asia",
-    hints: { category: "Physician and philosopher", century: "Born in the 10th century", clue: "His Canon of Medicine remained a standard medical text for centuries." },
+    hints: { category: "Physician and philosopher", clue: "His Canon of Medicine remained a standard medical text for centuries." },
     sources: source("Avicenna"),
   },
   {
@@ -244,7 +263,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An Italian astronomer and physicist whose telescopic observations strengthened the case for a Sun-centered solar system.",
     categories: ["Scientist", "Astronomer"],
     region: "Europe",
-    hints: { category: "Astronomer and physicist", century: "Born in the 16th century", clue: "His telescopic observations included Jupiter’s largest moons." },
+    hints: { category: "Astronomer and physicist", clue: "His telescopic observations included Jupiter’s largest moons." },
     sources: source("Galileo_Galilei"),
   },
   {
@@ -258,7 +277,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Filipino writer and reformer whose novels exposed colonial abuses and inspired the Philippine nationalist movement.",
     categories: ["Writer", "Nationalist"],
     region: "Southeast Asia",
-    hints: { category: "Writer and reformer", century: "Born in the 19th century", clue: "His novels challenged Spanish colonial rule in the Philippines." },
+    hints: { category: "Writer and reformer", clue: "His novels challenged Spanish colonial rule in the Philippines." },
     sources: source("José_Rizal"),
   },
   {
@@ -272,7 +291,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Zulu king whose military and political reforms transformed a small chiefdom into a powerful southern African kingdom.",
     categories: ["Monarch", "Military leader"],
     region: "Southern Africa",
-    hints: { category: "King and military leader", century: "Born in the 18th century", clue: "He reorganized the forces of a southern African kingdom." },
+    hints: { category: "King and military leader", clue: "He reorganized the forces of a southern African kingdom." },
     sources: source("Shaka"),
   },
   {
@@ -286,7 +305,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "Empress of Russia for 34 years, overseeing major territorial expansion and engaging deeply with Enlightenment ideas.",
     categories: ["Monarch"],
     region: "Europe and Russia",
-    hints: { category: "Monarch", century: "Born in the 18th century", clue: "Born a German princess, she became one of Russia’s longest-ruling empresses." },
+    hints: { category: "Monarch", clue: "Born a German princess, she became one of Russia’s longest-ruling empresses." },
     sources: source("Catherine_the_Great"),
   },
   {
@@ -300,7 +319,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A formerly enslaved general and statesman who became the most prominent leader of the Haitian Revolution.",
     categories: ["Revolutionary", "Military leader"],
     region: "Caribbean",
-    hints: { category: "Revolutionary leader", century: "Born in the 18th century", clue: "He led the only successful large-scale revolt by enslaved people in modern history." },
+    hints: { category: "Revolutionary leader", clue: "He led the only successful large-scale revolt by enslaved people in modern history." },
     sources: source("Toussaint_Louverture"),
   },
   {
@@ -314,7 +333,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Lemhi Shoshone woman who helped the Lewis and Clark Expedition navigate and communicate across the American West.",
     categories: ["Explorer", "Interpreter"],
     region: "Indigenous North America",
-    hints: { category: "Interpreter and expedition guide", century: "Born in the 18th century", clue: "She traveled from the northern plains to the Pacific with an American expedition." },
+    hints: { category: "Interpreter and expedition guide", clue: "She traveled from the northern plains to the Pacific with an American expedition." },
     sources: source("Sacagawea"),
   },
   {
@@ -328,7 +347,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Bengali poet, composer, philosopher, and Nobel laureate who reshaped modern literature and music in South Asia.",
     categories: ["Writer", "Composer"],
     region: "South Asia",
-    hints: { category: "Poet and composer", century: "Born in the 19th century", clue: "He was the first non-European Nobel laureate in Literature." },
+    hints: { category: "Poet and composer", clue: "He was the first non-European Nobel laureate in Literature." },
     sources: source("Rabindranath_Tagore"),
   },
   {
@@ -342,7 +361,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "The last sovereign monarch of the Hawaiian Kingdom, as well as a composer and advocate for Hawaiian independence.",
     categories: ["Monarch", "Composer"],
     region: "Oceania",
-    hints: { category: "Monarch and composer", century: "Born in the 19th century", clue: "She was the final reigning sovereign of an island kingdom in the Pacific." },
+    hints: { category: "Monarch and composer", clue: "She was the final reigning sovereign of an island kingdom in the Pacific." },
     sources: source("Liliʻuokalani"),
   },
   {
@@ -356,7 +375,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An inventor and electrical engineer whose work was central to the development of alternating-current power systems.",
     categories: ["Inventor", "Engineer"],
     region: "Europe and North America",
-    hints: { category: "Inventor and engineer", century: "Born in the 19th century", clue: "His work helped establish alternating current as a practical power system." },
+    hints: { category: "Inventor and engineer", clue: "His work helped establish alternating current as a practical power system." },
     sources: source("Nikola_Tesla"),
   },
   {
@@ -370,7 +389,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A Persian-language poet, scholar, and Sufi mystic whose works became influential across cultures and centuries.",
     categories: ["Poet", "Mystic"],
     region: "Central and West Asia",
-    hints: { category: "Poet and mystic", century: "Born in the 13th century", clue: "His major poetic work is the six-volume Masnavi." },
+    hints: { category: "Poet and mystic", clue: "His major poetic work is the six-volume Masnavi." },
     sources: source("Rumi"),
   },
   {
@@ -384,7 +403,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A British naval captain and cartographer whose Pacific voyages mapped coastlines while advancing European imperial expansion.",
     categories: ["Explorer", "Cartographer"],
     region: "Europe and the Pacific",
-    hints: { category: "Navigator and cartographer", century: "Born in the 18th century", clue: "His three Pacific voyages charted New Zealand and Australia’s eastern coast." },
+    hints: { category: "Navigator and cartographer", clue: "His three Pacific voyages charted New Zealand and Australia’s eastern coast." },
     sources: source("James_Cook"),
   },
   {
@@ -398,7 +417,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "A philosopher, mathematician, and astronomer who taught in Alexandria and became an enduring symbol of classical learning.",
     categories: ["Philosopher", "Mathematician"],
     region: "North Africa",
-    hints: { category: "Philosopher and mathematician", century: "Born in the 4th century", clue: "She led a Neoplatonic school in the great Mediterranean city where she lived." },
+    hints: { category: "Philosopher and mathematician", clue: "She led a Neoplatonic school in the great Mediterranean city where she lived." },
     sources: source("Hypatia"),
   },
   {
@@ -412,7 +431,7 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "The Inca ruler credited with transforming the Kingdom of Cusco into the expansive Tawantinsuyu empire.",
     categories: ["Monarch", "Military leader"],
     region: "Andean South America",
-    hints: { category: "Emperor and state-builder", century: "Born in the 15th century", clue: "He transformed a small Andean kingdom into the Inca Empire." },
+    hints: { category: "Emperor and state-builder", clue: "He transformed a small Andean kingdom into the Inca Empire." },
     sources: source("Pachacuti"),
   },
   {
@@ -426,11 +445,117 @@ const curatedHistoricalFigures: FigureRecord[] = [
     biography: "An Italian Baroque painter celebrated for dramatic compositions and powerful depictions of women from history and scripture.",
     categories: ["Artist"],
     region: "Europe",
-    hints: { category: "Painter", century: "Born in the 16th century", clue: "She became one of the first women admitted to Florence’s art academy." },
+    hints: { category: "Painter", clue: "She became one of the first women admitted to Florence’s art academy." },
     sources: source("Artemisia_Gentileschi"),
   },
   ...addedMediumFigures,
 ];
+
+const generatedRecords = generatedFigures as GeneratedRecord[];
+
+const fameByName = new Map<string, number>();
+const nameOwnerIndex = new Map<string, number>();
+const countryCodeByName = new Map<string, string>();
+generatedRecords.forEach((record, index) => {
+  const key = normalizeName(record.n);
+  if (!fameByName.has(key)) {
+    fameByName.set(key, record.l);
+    nameOwnerIndex.set(key, index);
+  }
+  if (record.i && !countryCodeByName.has(key)) countryCodeByName.set(key, record.i);
+});
+
+function lookup<T>(map: Map<string, T>, figure: FigureRecord) {
+  for (const name of [figure.name, ...figure.aliases]) {
+    const hit = map.get(normalizeName(name));
+    if (hit != null) return hit;
+  }
+  return undefined;
+}
+
+function fameFor(figure: FigureRecord) {
+  const counts = [figure.name, ...figure.aliases]
+    .map((name) => fameByName.get(normalizeName(name)))
+    .filter((count): count is number => count != null);
+  return counts.length ? Math.max(...counts) : null;
+}
+
+const NAME_STOPWORDS = new Set(["saint", "pope", "king", "queen", "great", "emperor", "princess", "prince"]);
+
+/** Blanks out words of the answer that leak into a clue ("founder of The Walt Disney Company"). */
+export function scrubName(text: string, name: string) {
+  const ownName = name.split(/\s+of\s+|,/i)[0];
+  const words = ownName
+    .split(/[\s.-]+/)
+    .filter((word) => word.length >= 4 && !NAME_STOPWORDS.has(word.toLowerCase()));
+  return words.reduce((result, word) => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return result.replace(new RegExp(`(?<![\\p{L}])${escaped}(?![\\p{L}])`, "giu"), "…");
+  }, text);
+}
+
+/**
+ * Wikidata often lists a bare surname as an alias ("Lavoisier"). Single names are handled
+ * by the matcher's own tier rules, so such aliases would let them slip through on Hard.
+ */
+function isBareNamePart(alias: string, name: string) {
+  const key = normalizeName(alias);
+  return !key.includes(" ") && normalizeName(name).split(" ").includes(key);
+}
+
+function expandGenerated(record: GeneratedRecord): FigureRecord & { countryCode: string } {
+  const description = record.s || "Historical figure";
+  return {
+    id: record.id,
+    name: record.n,
+    aliases: record.a.filter((alias) => !isBareNamePart(alias, record.n)),
+    birthYear: record.b,
+    deathYear: record.d,
+    birthLocation: { name: record.bp[0], latitude: record.bp[1], longitude: record.bp[2] },
+    deathLocation: { name: record.dp[0], latitude: record.dp[1], longitude: record.dp[2] },
+    biography: `${description}.`,
+    categories: record.o,
+    region: record.c,
+    hints: {
+      category: record.o.slice(0, 2).join(" · ") || "Historical figure",
+      clue: description,
+    },
+    sources: [`https://www.wikidata.org/wiki/${record.q}`],
+    countryCode: record.i,
+  };
+}
+
+/** Names checked against the curated easy/medium lists. */
+function listNames(figure: FigureRecord, sitelinks: number | null, ownsName: boolean) {
+  if (!ownsName) return [];
+  // Aliases of lesser-known people ("Napoleon" for Napoleon III) shouldn't promote them.
+  return sitelinks == null || sitelinks >= MEDIUM_SITELINKS ? [figure.name, ...figure.aliases] : [figure.name];
+}
+
+function complete(
+  figure: FigureRecord,
+  countryCode: string | undefined,
+  sitelinks: number | null,
+  ownsName = true,
+): HistoricalFigure {
+  const worldRegion = worldRegionFor(
+    countryCode,
+    figure.birthLocation.latitude,
+    figure.birthLocation.longitude,
+  );
+  let clue = scrubName(figure.hints.clue, figure.name);
+  // One-line descriptions such as "English poet" add nothing to the first two hints.
+  if (clue.split(/\s+/).length <= 4) clue = `${clue}. Born in ${figure.birthLocation.name}`;
+  return {
+    ...figure,
+    region: figure.region || worldRegionDetails[worldRegion].label,
+    hints: { category: figure.hints.category, clue },
+    recognition: recognitionFor(listNames(figure, sitelinks, ownsName), sitelinks),
+    era: eraFor(figure.birthYear),
+    field: fieldFor(figure.biography, [figure.hints.category, ...figure.categories]),
+    worldRegion,
+  };
+}
 
 const curatedIds = new Set(curatedHistoricalFigures.map((figure) => figure.id));
 const curatedNameKeys = new Set<string>();
@@ -442,32 +567,31 @@ for (const figure of curatedHistoricalFigures) {
   }
 }
 
-const generatedRecords = generatedFigures as FigureRecord[];
-const fameRankByName = new Map<string, number>();
-generatedRecords.forEach((figure, index) => {
-  const key = normalizeName(figure.name);
-  if (!fameRankByName.has(key)) fameRankByName.set(key, index);
-});
-
-function fameRankFor(figure: FigureRecord) {
-  const ranks = [figure.name, ...figure.aliases]
-    .map((name) => fameRankByName.get(normalizeName(name)))
-    .filter((rank): rank is number => rank != null);
-  return ranks.length ? Math.min(...ranks) : null;
-}
-
-function withRecognition(figure: FigureRecord): HistoricalFigure {
-  return {
-    ...figure,
-    recognition: recognitionFor([figure.name, ...figure.aliases], fameRankFor(figure)),
-  };
+// The same person can appear under another label ("Henry VIII" / "Henry VIII of England"):
+// matching life years and a nearby birth place is a reliable sign it is a duplicate.
+function duplicatesCurated(record: GeneratedRecord) {
+  return curatedHistoricalFigures.some(
+    (figure) =>
+      figure.birthYear === record.b &&
+      figure.deathYear === record.d &&
+      Math.abs(figure.birthLocation.latitude - record.bp[1]) < 1.5 &&
+      Math.abs(figure.birthLocation.longitude - record.bp[2]) < 1.5,
+  );
 }
 
 export const historicalFigures: HistoricalFigure[] = [
-  ...curatedHistoricalFigures,
-  ...generatedRecords.filter(
-    (figure) => !curatedIds.has(figure.id) && !curatedNameKeys.has(normalizeName(figure.name)),
+  ...curatedHistoricalFigures.map((figure) =>
+    complete(figure, lookup(countryCodeByName, figure), fameFor(figure)),
   ),
-].map(withRecognition);
+  ...generatedRecords.flatMap((record, index) => {
+    const key = normalizeName(record.n);
+    if (curatedIds.has(record.id) || curatedNameKeys.has(key) || duplicatesCurated(record)) return [];
+    const { countryCode, ...figure } = expandGenerated(record);
+    // Only the most famous bearer of a name gets that name's place on the curated lists,
+    // so the footballer Sócrates doesn't inherit the philosopher's tier.
+    const ownsName = nameOwnerIndex.get(key) === index;
+    return [complete(figure, countryCode, record.l, ownsName)];
+  }),
+];
 
 export const figureById = new Map(historicalFigures.map((figure) => [figure.id, figure]));

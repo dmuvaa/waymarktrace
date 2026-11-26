@@ -4,9 +4,9 @@ import { normalizeSession } from "./persistence";
 import type { GameSession } from "@/types/game";
 
 const session: GameSession = {
-  version: 1,
+  version: 2,
   id: "session",
-  difficulty: "easy",
+  setup: { difficulty: "easy", era: "any", field: "any", region: "any", rounds: 10 },
   figureIds: ["ada-lovelace"],
   roundIndex: 0,
   score: 0,

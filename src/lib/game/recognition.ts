@@ -119,6 +119,121 @@ const easyNames = new Set([
   "winston churchill",
   "wolfgang amadeus mozart",
   "yuri gagarin",
+  // Household names promoted after the dataset grew past 4,000 figures.
+  "agatha christie",
+  "al capone",
+  "alexander fleming",
+  "alexander graham bell",
+  "alfred hitchcock",
+  "alfred nobel",
+  "amadeus",
+  "amelia earhart",
+  "andy warhol",
+  "antonio vivaldi",
+  "atahualpa",
+  "attila",
+  "attila the hun",
+  "audrey hepburn",
+  "benito mussolini",
+  "bob dylan",
+  "bob marley",
+  "bruce lee",
+  "charlemagne",
+  "charles darwin",
+  "claude monet",
+  "cyrus the great",
+  "diana princess of wales",
+  "diego maradona",
+  "dwight d eisenhower",
+  "ferdinand magellan",
+  "fidel castro",
+  "florence nightingale",
+  "francisco franco",
+  "frank sinatra",
+  "freddie mercury",
+  "frederic chopin",
+  "geronimo",
+  "grace kelly",
+  "gregor mendel",
+  "greta garbo",
+  "guy fawkes",
+  "hammurabi",
+  "hannibal",
+  "harry houdini",
+  "harry s truman",
+  "helen keller",
+  "henry ford",
+  "henry viii",
+  "henry viii of england",
+  "hirohito",
+  "ho chi minh",
+  "homer",
+  "houdini",
+  "indira gandhi",
+  "isaac asimov",
+  "ivan iv of russia",
+  "ivan the terrible",
+  "j r r tolkien",
+  "jack the ripper",
+  "james cook",
+  "james dean",
+  "janis joplin",
+  "jawaharlal nehru",
+  "johannes gutenberg",
+  "john lennon",
+  "john wayne",
+  "johnny cash",
+  "jules verne",
+  "kim il sung",
+  "laozi",
+  "leonidas i",
+  "louis armstrong",
+  "malcolm x",
+  "mansa musa",
+  "marcus aurelius",
+  "marie antoinette",
+  "maximilien robespierre",
+  "mikhail gorbachev",
+  "moctezuma ii",
+  "montezuma ii",
+  "muhammad ali",
+  "nero",
+  "nikita khrushchev",
+  "osama bin laden",
+  "pablo picasso",
+  "pele",
+  "peter the great",
+  "pocahontas",
+  "pol pot",
+  "pyotr ilyich tchaikovsky",
+  "qin shi huang",
+  "ramesses ii",
+  "raphael",
+  "ray charles",
+  "richard nixon",
+  "richard the lionheart",
+  "robert the bruce",
+  "robespierre",
+  "robin hood",
+  "rosa parks",
+  "saddam hussein",
+  "saladin",
+  "shaka zulu",
+  "simon bolivar",
+  "sitting bull",
+  "spartacus",
+  "stan lee",
+  "stephen hawking",
+  "sun tzu",
+  "theodore roosevelt",
+  "tutankhamun",
+  "vasco da gama",
+  "victor hugo",
+  "vlad iii",
+  "vlad the impaler",
+  "william wallace",
+  "winston churchill",
+  "yasser arafat",
 ]);
 
 const mediumNames = new Set([
@@ -223,12 +338,21 @@ const mediumNames = new Set([
   "william the conqueror",
 ]);
 
-export function recognitionFor(names: string[], fameRank: number | null): Difficulty {
+/**
+ * Fame is the number of Wikipedia language editions with an article on the person.
+ * Roughly: 120+ is a familiar name, 70–119 someone you'd meet in a good history book,
+ * and below 70 a deep cut that mostly specialists know.
+ */
+export const MEDIUM_SITELINKS = 120;
+export const HARD_SITELINKS = 70;
+
+export function recognitionFor(names: string[], sitelinks: number | null): Difficulty {
   const keys = names.map(normalizeName);
   if (keys.some((key) => easyNames.has(key))) return "easy";
   if (keys.some((key) => mediumNames.has(key))) return "medium";
-  if (fameRank == null) return "super-hard";
-  if (fameRank < 120) return "medium";
-  if (fameRank < 280) return "hard";
+  // Handpicked figures missing from the Wikidata pull are well known enough for Hard.
+  if (sitelinks == null) return "hard";
+  if (sitelinks >= MEDIUM_SITELINKS) return "medium";
+  if (sitelinks >= HARD_SITELINKS) return "hard";
   return "super-hard";
 }

@@ -38,10 +38,10 @@ describe("answer matching", () => {
   });
 
   it("keeps single surnames off hard", () => {
-    const truman = historicalFigures.find((figure) => figure.id === "harry-s-truman")!;
-    expect(truman.recognition).toBe("hard");
-    expect(matchAnswer("Truman", truman, historicalFigures).status).toBe("incorrect");
-    expect(matchAnswer("Harry S. Truman", truman, historicalFigures).status).toBe("correct");
+    const degas = historicalFigures.find((figure) => figure.id === "edgar-degas")!;
+    expect(degas.recognition).toBe("hard");
+    expect(matchAnswer("Degas", degas, historicalFigures).status).toBe("incorrect");
+    expect(matchAnswer("Edgar Degas", degas, historicalFigures).status).toBe("correct");
   });
 
   it("normalizes accents and punctuation", () => {

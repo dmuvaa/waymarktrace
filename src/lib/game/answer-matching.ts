@@ -83,7 +83,10 @@ function matchSingleName(
   if (guessed.length !== 1 || guessed[0].length < 4) return null;
 
   const token = guessed[0];
+  // Only well-known figures compete for a bare name: "Adolf" still means Hitler even though
+  // the dataset also holds lesser-known Adolfs.
   const owners = dataset.filter((figure) =>
+    (figure.id === target.id || figure.recognition === "easy" || figure.recognition === "medium") &&
     significantTokens([figure.name, ...figure.aliases].join(" ")).some((nameToken) =>
       tokensClose(token, nameToken),
     ),
@@ -113,9 +116,14 @@ function candidateConfidence(guess: string, figure: HistoricalFigure) {
   const names = [figure.name, ...figure.aliases].map(normalizeName);
 
   if (names.includes(normalizedGuess)) return 1;
-  if (names.some((name) => isTokenMatch(normalizedGuess, name))) return 0.94;
+  const guessCount = tokens(normalizedGuess).length;
+  // A token match that covers the whole name ("Napolean Bonaparte") beats one that covers
+  // part of a longer name ("Louis Napoléon Bonaparte").
+  const tokenScores = names
+    .filter((name) => isTokenMatch(normalizedGuess, name))
+    .map((name) => 0.9 + 0.08 * Math.min(1, guessCount / tokens(name).length));
 
-  return Math.max(...names.map((name) => similarity(normalizedGuess, name)));
+  return Math.max(...tokenScores, ...names.map((name) => similarity(normalizedGuess, name)));
 }
 
 export function matchAnswer(
@@ -150,7 +158,7 @@ export function matchAnswer(
   );
 
   if (targetConfidence >= threshold) {
-    if (competingConfidence >= threshold && targetConfidence - competingConfidence < 0.08) {
+    if (competingConfidence >= threshold && targetConfidence - competingConfidence < 0.02) {
       return { status: "ambiguous", fuzzy: false };
     }
     return { status: "correct", fuzzy: targetConfidence < 1 };
